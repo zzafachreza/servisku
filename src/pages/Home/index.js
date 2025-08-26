@@ -1,5 +1,5 @@
 import {StyleSheet, Text, View, ScrollView, TouchableOpacity, Dimensions, TouchableNativeFeedback, Image, Animated} from 'react-native';
-import React, {useState, useRef, useEffect} from 'react';
+import React, {useState, useRef} from 'react';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {colors, fonts} from '../../utils';
 import FastImage from 'react-native-fast-image';
@@ -9,23 +9,6 @@ const {width, height} = Dimensions.get('window');
 
 export default function Home({navigation}) {
   const [user] = useState({});
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
 
   const navigateToDetail = (product) => {
     navigation.navigate('ProdukDetail', { product });
@@ -65,7 +48,7 @@ export default function Home({navigation}) {
     },
     {
       id: 2,
-      title: 'Data Costumer',
+      title: 'Data Pelanggan',
       icon: require("../../assets/costumer.png"),
       color: colors.secondary,
       gradient: [colors.secondary, colors.primary],
@@ -106,11 +89,7 @@ export default function Home({navigation}) {
         style={[
           styles.menuItemContainer,
           {
-            opacity: fadeAnim,
-            transform: [
-              { translateY: slideAnim },
-              { scale: animatedScale }
-            ],
+            transform: [{ scale: animatedScale }]
           },
         ]}>
         <TouchableOpacity
@@ -174,7 +153,7 @@ export default function Home({navigation}) {
         <View style={styles.header}>
           <View style={styles.greetingContainer}>
             <Text style={styles.greetingText}>Selamat datang,</Text>
-            <Text style={styles.appName}>Serviceku</Text>
+            <Text style={styles.appName}>Servisku</Text>
           </View>
           <View style={styles.logoContainer}>
             <FastImage
@@ -198,10 +177,10 @@ export default function Home({navigation}) {
         
         {/* Menu Section */}
         <View style={styles.menuSection}>
-          <Animated.View style={[styles.sectionHeader, {opacity: fadeAnim}]}>
+          <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Menu Utama</Text>
             <Text style={styles.sectionSubtitle}>Pilih layanan yang Anda butuhkan</Text>
-          </Animated.View>
+          </View>
           
           {/* Menu Items */}
           <View style={styles.menuGrid}>

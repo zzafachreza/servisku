@@ -175,7 +175,7 @@ export default function Splash({navigation}) {
               transform: [{translateY: textTranslateY}],
             },
           ]}>
-          <Text style={styles.appName}>Serviceku</Text>
+          <Text style={styles.appName}>Servisku</Text>
          
         </Animated.View>
 

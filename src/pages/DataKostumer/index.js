@@ -8,7 +8,8 @@ import Contacts from 'react-native-contacts'
 export default function DataKostumer() {
   const [formData, setFormData] = useState({
     nama: '',
-    noTelepon: ''
+    noTelepon: '',
+    alamat: ''
   })
   const [customerData, setCustomerData] = useState([])
   const [editingCustomer, setEditingCustomer] = useState(null)
@@ -54,6 +55,10 @@ export default function DataKostumer() {
     
     if (!formData.noTelepon.trim()) {
       errors.push('No Telepon')
+    }
+
+    if (!formData.alamat.trim()) {
+      errors.push('Alamat')
     }
 
     if (errors.length > 0) {
@@ -430,7 +435,7 @@ export default function DataKostumer() {
           })
         ]).start(() => {
           // Reset form
-          setFormData({ nama: '', noTelepon: '' })
+          setFormData({ nama: '', noTelepon: '', alamat: '' })
           setEditingCustomer(null)
           loadCustomerData()
           
@@ -471,13 +476,14 @@ export default function DataKostumer() {
   const handleEdit = (customer) => {
     setFormData({
       nama: customer.nama,
-      noTelepon: customer.noTelepon
+      noTelepon: customer.noTelepon,
+      alamat: customer.alamat || '' // Handle old data without alamat
     })
     setEditingCustomer(customer)
   }
 
   const handleCancelEdit = () => {
-    setFormData({ nama: '', noTelepon: '' })
+    setFormData({ nama: '', noTelepon: '', alamat: '' })
     setEditingCustomer(null)
   }
 
@@ -656,6 +662,22 @@ export default function DataKostumer() {
               </Animated.View>
             </TouchableOpacity>
           </View>
+
+          {/* Input Alamat */}
+          <MyInput 
+            label="Alamat" 
+            placeholder="Masukan alamat lengkap kostumer"
+            value={formData.alamat}
+            onChangeText={(value) => handleInputChange('alamat', value)}
+            editable={!loading}
+            multiline={true}
+            numberOfLines={3}
+            textAlignVertical="top"
+            style={{
+              height: 80,
+              paddingTop: 12
+            }}
+          />
           
           {/* Save Button with Animation */}
           <TouchableNativeFeedback 
@@ -837,9 +859,20 @@ export default function DataKostumer() {
                         fontSize: 14,
                         fontFamily: fonts.primary[500],
                         color: colors.secondary,
-                        marginBottom: 8
+                        marginBottom: 4
                       }}>
                         📞 {customer.noTelepon}
+                      </Text>
+                      
+                      {/* Display Alamat */}
+                      <Text style={{
+                        fontSize: 14,
+                        fontFamily: fonts.primary[400],
+                        color: '#6B7280',
+                        marginBottom: 8,
+                        lineHeight: 20
+                      }}>
+                        📍 {customer.alamat || 'Alamat tidak tersedia'}
                       </Text>
                       
                       <Text style={{
@@ -876,7 +909,7 @@ export default function DataKostumer() {
                           paddingVertical: 8,
                           borderRadius: 8,
                           opacity: loading ? 0.5 : 1,
-                          right:10
+                          right: 10
                         }}
                       >
                         <Text style={{
@@ -916,7 +949,6 @@ export default function DataKostumer() {
         </View>
       </ScrollView>
 
-      {/* Custom Modal */}
       {/* Custom Modal */}
       <Modal
         transparent={true}
