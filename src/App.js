@@ -20,7 +20,7 @@ export default function App() {
       />
       <ToastProvider
         duration={2000}
-        placement="bottom"
+        placement="top"
         offsetBottom={70}
         animationDuration={250}
         animationType="zoom-in"

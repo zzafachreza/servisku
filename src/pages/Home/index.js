@@ -1,4 +1,14 @@
-import {StyleSheet, Text, View, ScrollView, TouchableOpacity, Dimensions, TouchableNativeFeedback, Image, Animated} from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  TouchableOpacity,
+  Dimensions,
+  TouchableNativeFeedback,
+  Image,
+  Animated,
+} from 'react-native';
 import React, {useState, useRef} from 'react';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {colors, fonts} from '../../utils';
@@ -10,12 +20,12 @@ const {width, height} = Dimensions.get('window');
 export default function Home({navigation}) {
   const [user] = useState({});
 
-  const navigateToDetail = (product) => {
-    navigation.navigate('ProdukDetail', { product });
+  const navigateToDetail = product => {
+    navigation.navigate('ProdukDetail', {product});
   };
 
   const handleMenuPress = (menuId, menuTitle) => {
-    switch(menuId) {
+    switch (menuId) {
       case 1:
         // Navigate ke halaman Data Device
         navigation.navigate('DataService');
@@ -31,7 +41,7 @@ export default function Home({navigation}) {
       default:
         console.log('Menu tidak ditemukan');
     }
-    
+
     // Optional: tambahkan analytics atau logging
     console.log(`Menu ${menuTitle} diklik`);
   };
@@ -39,8 +49,8 @@ export default function Home({navigation}) {
   const menuItems = [
     {
       id: 1,
-      title: 'Data Device',
-      icon: require("../../assets/data-icon_.png"),
+      title: 'Data Perangkat',
+      icon: require('../../assets/data-icon_.png'),
       color: colors.secondary,
       gradient: [colors.secondary, colors.primary],
       description: 'Kelola data perangkat',
@@ -49,7 +59,7 @@ export default function Home({navigation}) {
     {
       id: 2,
       title: 'Data Pelanggan',
-      icon: require("../../assets/costumer.png"),
+      icon: require('../../assets/costumer.png'),
       color: colors.secondary,
       gradient: [colors.secondary, colors.primary],
       description: 'Manajemen data costumer',
@@ -58,7 +68,7 @@ export default function Home({navigation}) {
     {
       id: 3,
       title: 'Transaksi',
-      icon: require("../../assets/transaction_icon.png"),
+      icon: require('../../assets/transaction_icon.png'),
       color: colors.secondary,
       gradient: [colors.secondary, colors.primary],
       description: 'Riwayat transaksi',
@@ -68,7 +78,7 @@ export default function Home({navigation}) {
 
   const renderMenuItem = (item, index) => {
     const animatedScale = useRef(new Animated.Value(1)).current;
-    
+
     const handlePressIn = () => {
       Animated.spring(animatedScale, {
         toValue: 0.95,
@@ -89,7 +99,7 @@ export default function Home({navigation}) {
         style={[
           styles.menuItemContainer,
           {
-            transform: [{ scale: animatedScale }]
+            transform: [{scale: animatedScale}],
           },
         ]}>
         <TouchableOpacity
@@ -98,43 +108,38 @@ export default function Home({navigation}) {
           onPress={item.onPress}
           activeOpacity={0.8}
           style={styles.menuItem}>
-          
           {/* Background Gradient */}
           <LinearGradient
             colors={item.gradient}
             style={styles.menuItemGradient}
             start={{x: 0, y: 0}}
             end={{x: 1, y: 1}}>
-            
             {/* Content Container */}
             <View style={styles.menuContent}>
               {/* Icon Container */}
               <View style={styles.iconContainer}>
                 <View style={styles.iconBackground}>
-                  <Image 
-                    style={styles.menuIcon} 
-                    source={item.icon}
-                  />
+                  <Image style={styles.menuIcon} source={item.icon} />
                 </View>
               </View>
-              
+
               {/* Text Container */}
               <View style={styles.textContainer}>
                 <Text style={styles.menuTitle}>{item.title}</Text>
                 <Text style={styles.menuDescription}>{item.description}</Text>
               </View>
-              
+
               {/* Arrow Icon */}
               <View style={styles.arrowContainer}>
                 <Text style={styles.arrowIcon}>›</Text>
               </View>
             </View>
-            
+
             {/* Decorative Elements */}
             <View style={styles.decorativeCircle1} />
             <View style={styles.decorativeCircle2} />
           </LinearGradient>
-          
+
           {/* Subtle Shadow Overlay */}
           <View style={styles.shadowOverlay} />
         </TouchableOpacity>
@@ -163,7 +168,7 @@ export default function Home({navigation}) {
             />
           </View>
         </View>
-        
+
         {/* Header Bottom Wave */}
         <View style={styles.waveContainer}>
           <View style={styles.wave} />
@@ -171,24 +176,23 @@ export default function Home({navigation}) {
       </LinearGradient>
 
       {/* Main Content */}
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}>
-        
         {/* Menu Section */}
         <View style={styles.menuSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Menu Utama</Text>
-            <Text style={styles.sectionSubtitle}>Pilih layanan yang Anda butuhkan</Text>
+            <Text style={styles.sectionSubtitle}>
+              Pilih layanan yang Anda butuhkan
+            </Text>
           </View>
-          
+
           {/* Menu Items */}
           <View style={styles.menuGrid}>
             {menuItems.map((item, index) => renderMenuItem(item, index))}
           </View>
         </View>
-        
-     
       </ScrollView>
     </SafeAreaView>
   );
@@ -216,13 +220,13 @@ const styles = StyleSheet.create({
   },
   greetingText: {
     fontFamily: fonts.secondary[400],
-    fontSize: 16,
+    fontSize: 14,
     color: 'rgba(255,255,255,0.9)',
     marginBottom: 4,
   },
   appName: {
     fontFamily: fonts.secondary[700],
-    fontSize: 24,
+    fontSize: 20,
     color: 'white',
   },
   logoContainer: {
@@ -256,13 +260,13 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontFamily: fonts.secondary[700],
-    fontSize: 22,
+    fontSize: 18,
     color: '#1F2937',
     marginBottom: 4,
   },
   sectionSubtitle: {
     fontFamily: fonts.secondary[400],
-    fontSize: 14,
+    fontSize: 12,
     color: '#6B7280',
   },
   menuGrid: {
@@ -276,7 +280,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     elevation: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.15,
     shadowRadius: 12,
   },
@@ -304,14 +308,13 @@ const styles = StyleSheet.create({
   menuIcon: {
     width: 32,
     height: 32,
-   
   },
   textContainer: {
     flex: 1,
   },
   menuTitle: {
     fontFamily: fonts.primary[600],
-    fontSize: 18,
+    fontSize: 14,
     color: 'white',
     marginBottom: 4,
   },
@@ -364,7 +367,7 @@ const styles = StyleSheet.create({
     padding: 20,
     elevation: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
     shadowRadius: 8,
   },

@@ -37,8 +37,8 @@ export default function MyInput({
       {!nolabel && (
         <Text
           style={{
-            fontFamily: fonts.primary[600],
-            fontSize: 14,
+            fontFamily: fonts.secondary[600],
+            fontSize: 12,
             color: colorlabel,
             marginBottom: 4,
             marginLeft: 2,
@@ -84,7 +84,7 @@ export default function MyInput({
           autoCapitalize="none"
           style={{
             fontFamily: fonts.secondary[600],
-            fontSize: 14,
+            fontSize: 12,
             flex: 1, // Flex untuk mengisi ruang yang ada
             paddingLeft: icon ? 10 : 40,
             paddingRight: rightLabel ? 10 : 0, // Spasi tambahan jika ada rightLabel

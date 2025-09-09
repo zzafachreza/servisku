@@ -1,13 +1,9 @@
 import React from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-} from 'react-native';
-import { colors, fonts } from '../../utils';
-import { useNavigation } from '@react-navigation/native';
-import { Icon } from 'react-native-elements';
+import {StyleSheet, Text, View, TouchableOpacity} from 'react-native';
+import {colors, fonts} from '../../utils';
+import {useNavigation} from '@react-navigation/native';
+import {Icon} from 'react-native-elements';
+import LinearGradient from 'react-native-linear-gradient';
 
 export default function MyHeader({
   onPress,
@@ -19,7 +15,10 @@ export default function MyHeader({
   const navigation = useNavigation();
 
   return (
-    <View
+    <LinearGradient
+      start={{x: 0, y: 0}}
+      end={{x: 1, y: 0}}
+      colors={[colors.primary, colors.secondary]}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -28,7 +27,6 @@ export default function MyHeader({
         backgroundColor: colors.primary,
         justifyContent: 'space-between',
       }}>
-
       {/* Tombol Back */}
       <TouchableOpacity
         onPress={() => navigation.goBack()}
@@ -38,11 +36,16 @@ export default function MyHeader({
           justifyContent: 'center',
           alignItems: 'center',
         }}>
-        <Icon type="ionicon" name="arrow-back-outline" size={22} color={color} />
+        <Icon
+          type="ionicon"
+          name="arrow-back-outline"
+          size={22}
+          color={color}
+        />
       </TouchableOpacity>
 
       {/* Judul */}
-      <View style={{ flex: 1, paddingHorizontal: 10 }}>
+      <View style={{flex: 1, paddingHorizontal: 10}}>
         <Text
           style={{
             ...fonts.headline5,
@@ -67,6 +70,6 @@ export default function MyHeader({
         }}>
         {icon && <Icon name={iconname} size={22} color={color} />}
       </TouchableOpacity>
-    </View>
+    </LinearGradient>
   );
 }

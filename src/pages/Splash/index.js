@@ -13,6 +13,7 @@ import {
 import {MyButton, MyGap} from '../../components';
 import {MyDimensi, colors, fonts, windowHeight, windowWidth} from '../../utils';
 import {MYAPP, getData} from '../../utils/localStorage';
+import SQLite from 'react-native-sqlite-storage';
 
 export default function Splash({navigation}) {
   // Animation values
@@ -25,7 +26,34 @@ export default function Splash({navigation}) {
   const backgroundOpacity = useRef(new Animated.Value(0)).current;
   const pulseAnimation = useRef(new Animated.Value(1)).current;
 
+  const initialDATABASE = () => {
+    const MYDB = SQLite.openDatabase(
+      'azeraf.db',
+      '1.0',
+      'azeraf',
+      200000,
+      () => {
+        console.log('Database OPENED');
+
+        MYDB.transaction(tx => {
+          tx.executeSql(
+            'CREATE TABLE IF NOT EXISTS device (id INTEGER PRIMARY KEY AUTOINCREMENT, nama_device TEXT NOT NULL);CREATE TABLE IF NOT EXISTS customer (id INTEGER PRIMARY KEY AUTOINCREMENT, nama TEXT NOT NULL, telepon TEXT NOT NULL, alamat TEXT NOT NULL);CREATE TABLE IF NOT EXISTS transaksi (id INTEGER PRIMARY KEY AUTOINCREMENT, tanggal TEXT NOT NULL, kode TEXT NOT NULL, fid_customer INTEGER NOT NULL, status TEXT, total_bruto DECIMAL(10,2), total_diskon DECIMAL(10,2), total DECIMAL(10,2), keterangan TEXT, FOREIGN KEY (fid_customer) REFERENCES customer(id));CREATE TABLE IF NOT EXISTS transaksi_detail (id INTEGER PRIMARY KEY AUTOINCREMENT, fid_transaksi INTEGER NOT NULL, device TEXT, kerusakan TEXT, harga DECIMAL(10,2), diskon DECIMAL(10,2), total DECIMAL(10,2), catatan TEXT, FOREIGN KEY (fid_transaksi) REFERENCES transaksi(id));CREATE TABLE IF NOT EXISTS transaksi_bayar (id INTEGER PRIMARY KEY AUTOINCREMENT, fid_transaksi INTEGER NOT NULL, tanggal_bayar TEXT NOT NULL, total DECIMAL(10,2), catatan TEXT, FOREIGN KEY (fid_transaksi) REFERENCES transaksi(id));',
+            [],
+            (tx, results) => {
+              console.log('Query Create Table is completed');
+              navigation.replace('Home');
+            },
+          );
+        });
+      },
+      () => {
+        console.log('SQL Error: ' + err);
+      },
+    );
+  };
+
   useEffect(() => {
+    initialDATABASE();
     // Hide status bar for better experience
     StatusBar.setHidden(true);
 
@@ -34,7 +62,7 @@ export default function Splash({navigation}) {
 
     // Navigate after animations
     const timer = setTimeout(() => {
-      navigation.replace('Home');
+      // navigation.replace('Home');
     }, 3000);
 
     return () => {
@@ -116,7 +144,7 @@ export default function Splash({navigation}) {
           duration: 1000,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     ).start();
   };
 
@@ -128,13 +156,10 @@ export default function Splash({navigation}) {
   return (
     <SafeAreaView style={styles.container}>
       {/* Gradient Background */}
-      <Animated.View 
-        style={[
-          styles.backgroundGradient, 
-          {opacity: backgroundOpacity}
-        ]}
+      <Animated.View
+        style={[styles.backgroundGradient, {opacity: backgroundOpacity}]}
       />
-      
+
       {/* Main Content */}
       <View style={styles.content}>
         {/* Logo Container with glow effect */}
@@ -144,10 +169,8 @@ export default function Splash({navigation}) {
               styles.logoGlow,
               {
                 opacity: logoOpacity,
-                transform: [
-                  {scale: pulseAnimation},
-                ]
-              }
+                transform: [{scale: pulseAnimation}],
+              },
             ]}
           />
           <Animated.Image
@@ -176,18 +199,14 @@ export default function Splash({navigation}) {
             },
           ]}>
           <Text style={styles.appName}>Servisku</Text>
-         
         </Animated.View>
 
         {/* Loading Indicator */}
         <Animated.View
-          style={[
-            styles.loadingContainer,
-            {opacity: loadingOpacity},
-          ]}>
-          <ActivityIndicator 
-            color={colors.primary} 
-            size="large" 
+          style={[styles.loadingContainer, {opacity: loadingOpacity}]}>
+          <ActivityIndicator
+            color={colors.primary}
+            size="large"
             style={styles.loader}
           />
           <Text style={styles.loadingText}>Memuat...</Text>
@@ -195,11 +214,8 @@ export default function Splash({navigation}) {
       </View>
 
       {/* Bottom decoration */}
-      <Animated.View 
-        style={[
-          styles.bottomDecoration,
-          {opacity: backgroundOpacity}
-        ]}
+      <Animated.View
+        style={[styles.bottomDecoration, {opacity: backgroundOpacity}]}
       />
     </SafeAreaView>
   );
