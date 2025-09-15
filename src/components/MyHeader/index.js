@@ -20,6 +20,7 @@ export default function MyHeader({
       end={{x: 1, y: 0}}
       colors={[colors.primary, colors.secondary]}
       style={{
+        paddingTop: 50,
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 16,

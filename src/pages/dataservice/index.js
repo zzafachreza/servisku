@@ -148,7 +148,7 @@ export default function DataDevice({navigation, route}) {
   };
 
   return (
-    <SafeAreaView style={{flex: 1, backgroundColor: colors.white}}>
+    <View style={{flex: 1, backgroundColor: colors.white}}>
       <MyHeader title="Perangkat" />
 
       {/* Input filter */}
@@ -266,7 +266,7 @@ export default function DataDevice({navigation, route}) {
           <MyButton title="Simpan" onPress={saveData} />
         </View>
       </RBSheet>
-    </SafeAreaView>
+    </View>
   );
 }
 

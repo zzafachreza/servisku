@@ -12,7 +12,7 @@ export default function MyButton({
   radius = 10,
   colorText = colors.white,
   fontWeight = 'normal',
-  iconColor = colors.primary,
+  iconColor = colors.white,
   borderSize = 2,
   kiri = true,
   borderColor = Color.blueGray[300],
@@ -22,7 +22,7 @@ export default function MyButton({
       style={styles(warna, radius, borderSize, borderColor).btn}
       onPress={onPress}>
       {kiri && Icons && (
-        <Icon type="ionicon" name={Icons} color={iconColor} size={24} />
+        <Icon type="ionicon" name={Icons} color={iconColor} size={14} />
       )}
       <Text
         style={{

@@ -1,371 +1,497 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, Alert } from 'react-native'
-import React, { useState } from 'react'
-import { colors, fonts } from '../../utils'
-import { MyHeader, MyButton, MyGap, MyPicker } from '../../components'
-import { launchImageLibrary, launchCamera } from 'react-native-image-picker'
-import { useToast } from 'react-native-toast-notifications'
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  Alert,
+} from 'react-native';
+import React, {useState} from 'react';
+import {Color, colors, fonts, windowHeight} from '../../utils';
+import {
+  MyHeader,
+  MyButton,
+  MyGap,
+  MyPicker,
+  MyCalendar,
+  MyInput,
+} from '../../components';
+import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
+import {useToast} from 'react-native-toast-notifications';
+import SQLite from 'react-native-sqlite-storage';
+import moment from 'moment';
+import {useEffect} from 'react';
+import {FlatList} from 'react-native';
+import RBSheet from 'react-native-raw-bottom-sheet';
+import {useRef} from 'react';
 
-export default function DetailTransaksi({ navigation, route }) {
-  const toast = useToast()
-  
+export default function DetailTransaksi({navigation, route}) {
+  const toast = useToast();
+  const [editId, setEditId] = useState(null);
+  const refRBSheet = useRef();
+
+  const db = SQLite.openDatabase(
+    {name: 'azeraf.db', location: 'default'},
+    () => console.log('DB Opened'),
+    err => console.log('SQL Error:', err),
+  );
+
   // Ambil data transaksi dari parameter
-  const { transaction } = route.params || {}
-  
+  const transaction = route.params;
+  console.log(transaction);
+
+  const getData = () => {
+    db.transaction(tx => {
+      tx.executeSql(
+        `SELECT * FROM transaksi_detail  WHERE fid_transaksi='${transaction.id}' ORDER BY id DESC`,
+        [],
+        (tx, res) => {
+          let rows = res.rows;
+          let temp = [];
+          for (let i = 0; i < rows.length; i++) {
+            temp.push(rows.item(i));
+          }
+
+          setData(temp);
+        },
+      );
+
+      tx.executeSql(
+        `SELECT * FROM transaksi_bayar  WHERE fid_transaksi='${transaction.id}' ORDER BY id DESC`,
+        [],
+        (tx, res) => {
+          let rows = res.rows;
+          let temp = [];
+          for (let i = 0; i < rows.length; i++) {
+            temp.push(rows.item(i));
+          }
+          console.log('bayar', temp);
+        },
+      );
+    });
+  };
+
   // State untuk status transaksi
-  const [selectedStatus, setSelectedStatus] = useState(transaction?.status || 'pending')
-  
+  const [selectedStatus, setSelectedStatus] = useState(
+    transaction?.status || 'pending',
+  );
+
   // State untuk foto bukti kerja
-  const [buktiKerja, setBuktiKerja] = useState(null)
-  
+  const [buktiKerja, setBuktiKerja] = useState(null);
+
   // Options untuk status dropdown
-  const statusOptions = [
-    { label: 'Selesai', value: 'completed' },
-    { label: 'Menunggu', value: 'pending' },
-    { label: 'Proses', value: 'process' },
-    { label: 'Batal', value: 'cancelled' }
-  ]
-
-  // Fungsi untuk upload foto
-  const selectImage = () => {
-    Alert.alert(
-      'Pilih Foto',
-      'Pilih foto bukti kerja dari:',
-      [
-        { text: 'Kamera', onPress: openCamera },
-        { text: 'Galeri', onPress: openGallery },
-        { text: 'Batal', style: 'cancel' }
-      ]
-    )
-  }
-
-  const openCamera = () => {
-    const options = {
-      mediaType: 'photo',
-      quality: 0.8,
-      maxWidth: 1000,
-      maxHeight: 1000,
+  const [kirim, setKirim] = useState({
+    fid_transaksi: transaction.id,
+    tanggal_bayar: moment().format('YYYY-MM-DD'),
+    total: '',
+    catatan: '',
+  });
+  const saveData = () => {
+    if (!kirim.total) {
+      toast.show('Total Belum disi', {
+        type: 'danger',
+      });
+      return;
     }
 
-    launchCamera(options, (response) => {
-      if (response.assets && response.assets[0]) {
-        setBuktiKerja(response.assets[0])
-      }
-    })
-  }
-
-  const openGallery = () => {
-    const options = {
-      mediaType: 'photo',
-      quality: 0.8,
-      maxWidth: 1000,
-      maxHeight: 1000,
+    if (!kirim.tanggal_bayar) {
+      toast.show('Tanggal Belum disi', {
+        type: 'danger',
+      });
+      return;
     }
 
-    launchImageLibrary(options, (response) => {
-      if (response.assets && response.assets[0]) {
-        setBuktiKerja(response.assets[0])
-      }
-    })
-  }
+    console.log(kirim);
 
-  // Fungsi untuk update status transaksi
-  const updateStatus = () => {
-    // Di sini bisa ditambahkan API call untuk update status
-    console.log('Update status:', selectedStatus)
-    console.log('Bukti kerja:', buktiKerja)
-    
-    toast.show('Status transaksi berhasil diupdate!', { type: 'success' })
-    
-    // Kembali ke halaman sebelumnya
-    navigation.goBack()
-  }
-
+    if (editId) {
+      db.transaction(tx => {
+        tx.executeSql(
+          'UPDATE device SET nama_device=? WHERE id=?',
+          [namaDevice, editId],
+          () => {
+            getData();
+            refRBSheet.current.close();
+            setNamaDevice('');
+            setEditId(null);
+          },
+        );
+      });
+    } else {
+      db.transaction(tx => {
+        tx.executeSql(
+          'INSERT INTO transaksi_bayar(fid_transaksi,tanggal_bayar,total,catatan) VALUES (?,?,?,?)',
+          [
+            kirim.fid_transaksi,
+            kirim.tanggal_bayar,
+            kirim.total,
+            kirim.catatan,
+          ],
+          (tx, res) => {
+            console.log(res);
+            refRBSheet.current.close();
+            getData();
+            toast.show('Data berhasil disimpan !', {
+              type: 'success',
+            });
+          },
+        );
+      });
+    }
+  };
   // Fungsi untuk format harga
-  const formatPrice = (price) => {
-    return `Rp ${price.toLocaleString('id-ID')}`
-  }
+  const formatPrice = price => {
+    return `Rp ${price.toLocaleString('id-ID')}`;
+  };
 
-  // Fungsi untuk format tanggal
-  const formatDate = (date) => {
-    const months = [
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-    ]
-    
-    const day = date.getDate()
-    const month = months[date.getMonth()]
-    const year = date.getFullYear()
-    
-    return `${day} ${month} ${year}`
-  }
+  const [data, setData] = useState([]);
+  const openForm = item => {
+    if (item) {
+      setKirim(item);
+      setEditId(item.id);
+    } else {
+      setKirim({
+        fid_transaksi: transaction.id,
+        tanggal_bayar: moment().format('YYYY-MM-DD'),
+        total: '',
+        catatan: '',
+      });
+      setEditId(null);
+    }
+    refRBSheet.current.open();
+  };
+
+  useEffect(() => {
+    getData();
+  }, []);
 
   if (!transaction) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.white }}>
+      <View style={{flex: 1, backgroundColor: colors.white}}>
         <MyHeader title="Detail Transaksi" />
-        <View style={{ 
-          flex: 1, 
-          justifyContent: 'center', 
-          alignItems: 'center',
-          padding: 20 
-        }}>
-          <Text style={{
-            fontFamily: fonts.secondary[600],
-            fontSize: 16,
-            color: colors.secondary,
-            textAlign: 'center'
+        <View
+          style={{
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 20,
           }}>
+          <Text
+            style={{
+              fontFamily: fonts.secondary[600],
+              fontSize: 16,
+              color: colors.secondary,
+              textAlign: 'center',
+            }}>
             Data transaksi tidak ditemukan
           </Text>
         </View>
       </View>
-    )
+    );
   }
 
   return (
-    <View style={{
-      flex: 1,
-      backgroundColor: colors.white
-    }}>
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: colors.white,
+      }}>
       <MyHeader title="Detail Transaksi" />
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={{
-          padding: 20,
-        }}>
-          
-          {/* Card Detail Transaksi */}
-          <View style={{
-            backgroundColor: 'white',
-            borderRadius: 15,
+        <View
+          style={{
             padding: 20,
-            marginBottom: 20,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 6,
-            elevation: 3,
           }}>
-            
-            {/* Nama Customer */}
-            <View style={{ marginBottom: 15 }}>
-              <Text style={{
-                fontFamily: fonts.secondary[600],
-                fontSize: 14,
-                color: colors.secondary,
-                marginBottom: 5
-              }}>
-                Nama Customer
-              </Text>
-              <Text style={{
-                fontFamily: fonts.secondary[700],
+          {/* Card Detail Transaksi */}
+          <View
+            style={{
+              backgroundColor: 'white',
+              borderRadius: 15,
+              padding: 20,
+              marginBottom: 20,
+              borderWidth: 1,
+              borderColor: Color.blueGray[200],
+            }}>
+            <Text
+              style={{
+                fontFamily: fonts.secondary[800],
                 fontSize: 18,
-                color: colors.black
+                color: colors.secondary,
+                textAlign: 'center',
               }}>
-                {transaction.customerName}
+              {transaction.kode}
+            </Text>
+            <View style={{marginBottom: 5}}>
+              <Text
+                style={{
+                  fontFamily: fonts.secondary[600],
+                  fontSize: 12,
+                  color: colors.secondary,
+                  marginBottom: 5,
+                }}>
+                Tanggal
+              </Text>
+              <Text
+                style={{
+                  fontFamily: fonts.secondary[600],
+                  fontSize: 12,
+                  color: colors.black,
+                }}>
+                {moment(transaction.tanggal).format('DD MMMM YYYY')}
+              </Text>
+            </View>
+            {/* Nama Customer */}
+            <View style={{marginBottom: 5, marginTop: 10}}>
+              <Text
+                style={{
+                  fontFamily: fonts.secondary[600],
+                  fontSize: 12,
+                  color: colors.secondary,
+                  marginBottom: 5,
+                }}>
+                Pelanggan
+              </Text>
+              <Text
+                style={{
+                  fontFamily: fonts.secondary[600],
+                  fontSize: 12,
+                  color: colors.black,
+                }}>
+                {transaction.nama} / {transaction.telepon}
               </Text>
             </View>
 
             {/* Tanggal */}
-            <View style={{ marginBottom: 15 }}>
-              <Text style={{
-                fontFamily: fonts.secondary[600],
-                fontSize: 14,
-                color: colors.secondary,
-                marginBottom: 5
-              }}>
-                Tanggal Transaksi
-              </Text>
-              <Text style={{
-                fontFamily: fonts.secondary[600],
-                fontSize: 16,
-                color: colors.black
-              }}>
-                {formatDate(transaction.date)}
-              </Text>
-            </View>
-
-            {/* Produk */}
-            <View style={{ marginBottom: 15 }}>
-              <Text style={{
-                fontFamily: fonts.secondary[600],
-                fontSize: 14,
-                color: colors.secondary,
-                marginBottom: 5
-              }}>
-                Produk/Layanan
-              </Text>
-              <Text style={{
-                fontFamily: fonts.secondary[600],
-                fontSize: 16,
-                color: colors.black,
-                lineHeight: 22
-              }}>
-                {transaction.description}
-              </Text>
-            </View>
-
-            {/* Biaya */}
-            <View style={{ marginBottom: 20 }}>
-              <Text style={{
-                fontFamily: fonts.secondary[600],
-                fontSize: 14,
-                color: colors.secondary,
-                marginBottom: 5
-              }}>
-                Total Biaya
-              </Text>
-              <Text style={{
-                fontFamily: fonts.secondary[700],
-                fontSize: 20,
-                color: colors.primary
-              }}>
-                {formatPrice(transaction.amount)}
-              </Text>
-            </View>
-
-            {/* Status Saat Ini */}
-            <View style={{
-              backgroundColor: colors.primary,
-              borderRadius: 10,
-              padding: 15,
-              alignItems: 'center'
-            }}>
-              <Text style={{
-                fontFamily: fonts.secondary[600],
-                fontSize: 14,
-                color: 'white',
-                marginBottom: 5
-              }}>
-                Status Saat Ini
-              </Text>
-              <Text style={{
-                fontFamily: fonts.secondary[700],
-                fontSize: 16,
-                color: 'white'
-              }}>
-                {statusOptions.find(option => option.value === transaction.status)?.label || 'Tidak Diketahui'}
-              </Text>
-            </View>
           </View>
 
           {/* Update Status Section */}
-          <View style={{
-            backgroundColor: 'white',
-            borderRadius: 15,
-            padding: 20,
-            marginBottom: 20,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 6,
-            elevation: 3,
-          }}>
-            <Text style={{
-              fontFamily: fonts.secondary[700],
-              fontSize: 18,
-              color: colors.black,
-              marginBottom: 15
+          <View
+            style={{
+              backgroundColor: 'white',
+              borderRadius: 15,
+              padding: 20,
+              marginBottom: 20,
+              borderWidth: 1,
+              borderColor: Color.blueGray[200],
             }}>
-              Update Status Transaksi
-            </Text>
-
-            <MyPicker
-              label="Status Baru"
-              data={statusOptions}
-              value={selectedStatus}
-              onValueChange={(value) => setSelectedStatus(value)}
+            <FlatList
+              data={data}
+              renderItem={({item, index}) => {
+                return (
+                  <View
+                    style={{
+                      padding: 10,
+                      marginVertical: 2,
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                    }}>
+                    <View style={{flex: 1}}>
+                      <Text
+                        style={{
+                          fontFamily: fonts.secondary[700],
+                          fontSize: 14,
+                          color: colors.black,
+                          marginBottom: 5,
+                        }}>
+                        {item.device}
+                      </Text>
+                      <Text
+                        style={{
+                          fontFamily: fonts.secondary[400],
+                          fontSize: 12,
+                          color: colors.secondary,
+                          marginBottom: 3,
+                        }}>
+                        Kerusakan: {item.kerusakan}
+                      </Text>
+                      <Text
+                        style={{
+                          fontFamily: fonts.secondary[400],
+                          fontSize: 12,
+                          color: colors.black,
+                          marginBottom: 3,
+                        }}>
+                        Harga: Rp{' '}
+                        {parseFloat(item.harga || 0).toLocaleString('id-ID')}
+                      </Text>
+                      {parseFloat(item.diskon || 0) > 0 && (
+                        <Text
+                          style={{
+                            fontFamily: fonts.secondary[400],
+                            fontSize: 12,
+                            color: colors.danger,
+                            marginBottom: 3,
+                          }}>
+                          Diskon: Rp{' '}
+                          {parseFloat(item.diskon || 0).toLocaleString('id-ID')}
+                        </Text>
+                      )}
+                      <Text
+                        style={{
+                          fontFamily: fonts.secondary[600],
+                          fontSize: 13,
+                          color: colors.primary,
+                        }}>
+                        Total: Rp{' '}
+                        {parseFloat(item.total || 0).toLocaleString('id-ID')}
+                      </Text>
+                      {item.catatan.length > 0 && (
+                        <Text
+                          style={{
+                            fontFamily: fonts.secondary[400],
+                            fontSize: 11,
+                            color: colors.secondary,
+                            marginTop: 5,
+                            fontStyle: 'italic',
+                          }}>
+                          Catatan: {item.catatan}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                );
+              }}
             />
           </View>
 
-          {/* Upload Bukti Kerja Section */}
-          <View style={{
-            backgroundColor: 'white',
-            borderRadius: 15,
-            padding: 20,
-            marginBottom: 30,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 6,
-            elevation: 3,
-          }}>
-            <Text style={{
-              fontFamily: fonts.secondary[700],
-              fontSize: 18,
-              color: colors.black,
-              marginBottom: 15
+          <View
+            style={{
+              backgroundColor: 'white',
+              borderRadius: 15,
+              padding: 20,
+              marginBottom: 20,
+              borderWidth: 1,
+              borderColor: Color.blueGray[200],
             }}>
-              Upload Bukti Kerja
-            </Text>
+            {/* Nama Customer */}
 
-            {/* Tombol Upload */}
-            <TouchableOpacity
-              onPress={selectImage}
-              style={{
-                borderWidth: 2,
-                borderColor: colors.primary,
-                borderStyle: 'dashed',
-                borderRadius: 10,
-                padding: 20,
-                alignItems: 'center',
-                marginBottom: 15
-              }}
-            >
-              <Text style={{
-                fontFamily: fonts.secondary[600],
-                fontSize: 16,
-                color: colors.primary,
-                textAlign: 'center'
-              }}>
-                {buktiKerja ? 'Ganti Foto' : 'Pilih Foto Bukti Kerja'}
+            {/* Biaya */}
+            <View style={{marginBottom: 10}}>
+              <Text
+                style={{
+                  fontFamily: fonts.secondary[600],
+                  fontSize: 14,
+                  color: colors.secondary,
+                }}>
+                Total
               </Text>
-              <Text style={{
-                fontFamily: fonts.secondary[400],
-                fontSize: 12,
-                color: colors.secondary,
-                textAlign: 'center',
-                marginTop: 5
-              }}>
-                Tap untuk memilih dari kamera atau galeri
-              </Text>
-            </TouchableOpacity>
 
-            {/* Preview Foto */}
-            {buktiKerja && (
-              <View style={{
-                alignItems: 'center',
-                marginBottom: 15
-              }}>
-                <Image
-                  source={{ uri: buktiKerja.uri }}
-                  style={{
-                    width: 200,
-                    height: 200,
-                    borderRadius: 10,
-                    resizeMode: 'cover'
-                  }}
-                />
-                <Text style={{
-                  fontFamily: fonts.secondary[500],
+              <Text
+                style={{
+                  fontFamily: fonts.secondary[800],
+                  fontSize: 20,
+                  color: colors.primary,
+                }}>
+                {formatPrice(transaction.total)}
+              </Text>
+            </View>
+
+            <View style={{marginBottom: 5, marginTop: 10}}>
+              <Text
+                style={{
+                  fontFamily: fonts.secondary[600],
                   fontSize: 12,
                   color: colors.secondary,
-                  marginTop: 5
+                  marginBottom: 5,
                 }}>
-                  {buktiKerja.fileName || 'foto_bukti_kerja.jpg'}
-                </Text>
-              </View>
-            )}
+                Status
+              </Text>
+              <Text
+                style={{
+                  fontFamily: fonts.secondary[600],
+                  fontSize: 12,
+                  color: colors.black,
+                }}>
+                {transaction.status}
+              </Text>
+            </View>
+
+            <View style={{marginBottom: 5}}>
+              <Text
+                style={{
+                  fontFamily: fonts.secondary[600],
+                  fontSize: 12,
+                  color: colors.black,
+                }}>
+                Catatan : {transaction.keterangan}
+              </Text>
+            </View>
           </View>
 
-          {/* Tombol Update */}
-          <MyButton
-            title="UPDATE STATUS TRANSAKSI"
-            onPress={updateStatus}
-          />
+          <View
+            style={{
+              backgroundColor: 'white',
+              borderRadius: 15,
+              padding: 20,
+              marginBottom: 20,
+              borderWidth: 1,
+              borderColor: Color.blueGray[200],
+            }}>
+            <Text
+              style={{
+                fontFamily: fonts.secondary[800],
+                fontSize: 14,
+                color: colors.secondary,
+              }}>
+              Riwayat Pembayaran
+            </Text>
 
+            <MyButton title="Tambah Pembayaran" onPress={openForm} />
+          </View>
+          <RBSheet
+            ref={refRBSheet}
+            closeOnDragDown={true}
+            closeOnPressMask={true}
+            closeOnPressBack={true}
+            height={windowHeight}
+            customStyles={{
+              container: {borderTopLeftRadius: 20, borderTopRightRadius: 20},
+            }}>
+            <View style={{padding: 20}}>
+              <Text
+                style={{
+                  ...fonts.headline3,
+                }}>
+                {editId ? 'Edit Pembayaran' : 'Tambah Pembayaran'}
+              </Text>
+              <MyCalendar
+                label="Tanggal Bayar"
+                value={kirim.tanggal_bayar}
+                onDateChange={x =>
+                  setKirim({
+                    ...kirim,
+                    tanggal_bayar: x,
+                  })
+                }
+              />
+              <MyInput
+                label="Total"
+                keyboardType="number-pad"
+                value={kirim.total}
+                onChangeText={x =>
+                  setKirim({
+                    ...kirim,
+                    total: x,
+                  })
+                }
+              />
+
+              <MyInput
+                label="Catatan"
+                value={kirim.catatan}
+                onChangeText={x =>
+                  setKirim({
+                    ...kirim,
+                    catatan: x,
+                  })
+                }
+              />
+              <MyButton title="Simpan" onPress={saveData} />
+            </View>
+          </RBSheet>
           <MyGap jarak={20} />
         </View>
       </ScrollView>
     </View>
-  )
+  );
 }

@@ -31,8 +31,8 @@ export default function MyCalendar({
       }}>
       <Text
         style={{
-          fontFamily: fonts.primary[600],
-          fontSize: 14,
+          fontFamily: fonts.secondary[600],
+          fontSize: 12,
           color: colors.black,
           marginBottom: 4,
           marginLeft: 4,
@@ -65,8 +65,9 @@ export default function MyCalendar({
           style={{
             position: 'absolute',
             zIndex: 0,
-            ...fonts.subheadline3,
-            top: 10,
+            fontFamily: fonts.secondary[600],
+            fontSize: 12,
+            top: 15,
             left: 44,
           }}>
           {value ? moment(value).format('DD MMMM YYYY') : placeholder}

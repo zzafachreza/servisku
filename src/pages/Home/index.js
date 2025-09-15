@@ -38,6 +38,10 @@ export default function Home({navigation}) {
         // Navigate ke halaman Transaksi
         navigation.navigate('Transaksi');
         break;
+      case 4:
+        // Navigate ke halaman Transaksi
+        navigation.navigate('Account');
+        break;
       default:
         console.log('Menu tidak ditemukan');
     }
@@ -73,6 +77,15 @@ export default function Home({navigation}) {
       gradient: [colors.secondary, colors.primary],
       description: 'Riwayat transaksi',
       onPress: () => handleMenuPress(3, 'Transaksi'),
+    },
+    {
+      id: 4,
+      title: 'Pengaturan',
+      icon: require('../../assets/setting.png'),
+      color: colors.secondary,
+      gradient: [colors.secondary, colors.primary],
+      description: 'Atur Toko, Backup & Restore',
+      onPress: () => handleMenuPress(4, 'Account'),
     },
   ];
 
@@ -148,7 +161,7 @@ export default function Home({navigation}) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header with Gradient */}
       <LinearGradient
         colors={[colors.primary, colors.secondary]}
@@ -194,7 +207,7 @@ export default function Home({navigation}) {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -204,7 +217,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   headerGradient: {
-    paddingBottom: 0,
+    paddingTop: 40,
     position: 'relative',
   },
   header: {
@@ -286,7 +299,7 @@ const styles = StyleSheet.create({
   },
   menuItemGradient: {
     padding: 20,
-    minHeight: 100,
+    minHeight: 75,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -314,13 +327,13 @@ const styles = StyleSheet.create({
   },
   menuTitle: {
     fontFamily: fonts.primary[600],
-    fontSize: 14,
+    fontSize: 12,
     color: 'white',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   menuDescription: {
     fontFamily: fonts.primary[400],
-    fontSize: 12,
+    fontSize: 10,
     color: 'rgba(255,255,255,0.8)',
   },
   arrowContainer: {

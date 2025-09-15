@@ -130,6 +130,9 @@ export default function DataKustomer({navigation, route}) {
     if (isFocused) {
       createTable();
       getData();
+      if (route.params?.add) {
+        openForm();
+      }
     }
   }, [isFocused]);
   const toast = useToast();
@@ -245,116 +248,128 @@ export default function DataKustomer({navigation, route}) {
   };
 
   return (
-    <SafeAreaView style={{flex: 1, backgroundColor: colors.white}}>
-      <MyHeader title="Pelanggan" />
-
+    <View style={{flex: 1, backgroundColor: colors.white}}>
       {/* Input filter */}
-      <View style={{padding: 10}}>
-        <View
-          style={{
-            borderWidth: 1,
-            borderRadius: 10,
-            height: 45,
-            borderColor: Color.blueGray[300],
-            paddingLeft: 10,
-            position: 'relative',
-          }}>
-          <TextInput
-            style={{
-              fontFamily: fonts.secondary[600],
-              fontSize: 12,
-            }}
-            autoCapitalize="none"
-            value={search}
-            onChangeText={filterData}
-            placeholder="Masukkan kata kunci"
+      {!route.params?.add && (
+        <>
+          <MyHeader title="Pelanggan" />
+          <View style={{padding: 10}}>
+            <View
+              style={{
+                borderWidth: 1,
+                borderRadius: 10,
+                height: 45,
+                borderColor: Color.blueGray[300],
+                paddingLeft: 10,
+                position: 'relative',
+              }}>
+              <TextInput
+                style={{
+                  fontFamily: fonts.secondary[600],
+                  fontSize: 12,
+                }}
+                autoCapitalize="none"
+                value={search}
+                onChangeText={filterData}
+                placeholder="Masukkan kata kunci"
+              />
+
+              <View
+                style={{
+                  position: 'absolute',
+                  right: 10,
+                  top: 10,
+                }}>
+                <Icon
+                  type="ioncion"
+                  name="search"
+                  color={Color.blueGray[300]}
+                />
+              </View>
+            </View>
+          </View>
+          <View style={{marginHorizontal: 14, marginBottom: 10}}>
+            <Text
+              style={{
+                fontFamily: fonts.secondary[600],
+                fontSize: 12,
+              }}>
+              Jumlah :{' '}
+              <Text
+                style={{
+                  color: colors.secondary,
+                  fontFamily: fonts.secondary[800],
+                  fontSize: 14,
+                }}>
+                {filtered.length}
+              </Text>
+            </Text>
+          </View>
+          <FlatList
+            data={filtered}
+            keyExtractor={item => item.id.toString()}
+            renderItem={({item}) => (
+              <View style={styles.item}>
+                <View>
+                  <Text style={styles.nama}>{item.nama}</Text>
+                  <Text style={styles.nama}>{item.telepon}</Text>
+                  <Text style={styles.nama}>{item.alamat}</Text>
+                </View>
+                <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                  <TouchableOpacity
+                    style={{
+                      paddingHorizontal: 10,
+                    }}
+                    onPress={() => openForm(item)}>
+                    <Icon
+                      type="ionicon"
+                      name="create-outline"
+                      color={colors.secondary}
+                      size={20}
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{
+                      paddingHorizontal: 10,
+                    }}
+                    onPress={() => deleteData(item.id)}>
+                    <Icon
+                      type="ionicon"
+                      name="trash-outline"
+                      color={colors.danger}
+                      size={20}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+            ListEmptyComponent={
+              <Text style={{textAlign: 'center', marginTop: 20}}>
+                Tidak ada pelanggan
+              </Text>
+            }
           />
 
-          <View
-            style={{
-              position: 'absolute',
-              right: 10,
-              top: 10,
-            }}>
-            <Icon type="ioncion" name="search" color={Color.blueGray[300]} />
+          <View style={{padding: 20}}>
+            <MyButton title="Tambah Pelanggan" onPress={() => openForm()} />
           </View>
-        </View>
-      </View>
-      <View style={{marginHorizontal: 14, marginBottom: 10}}>
-        <Text
-          style={{
-            fontFamily: fonts.secondary[600],
-            fontSize: 12,
-          }}>
-          Jumlah :{' '}
-          <Text
-            style={{
-              color: colors.secondary,
-              fontFamily: fonts.secondary[800],
-              fontSize: 14,
-            }}>
-            {filtered.length}
-          </Text>
-        </Text>
-      </View>
-      <FlatList
-        data={filtered}
-        keyExtractor={item => item.id.toString()}
-        renderItem={({item}) => (
-          <View style={styles.item}>
-            <View>
-              <Text style={styles.nama}>{item.nama}</Text>
-              <Text style={styles.nama}>{item.telepon}</Text>
-              <Text style={styles.nama}>{item.alamat}</Text>
-            </View>
-            <View style={{flexDirection: 'row', alignItems: 'center'}}>
-              <TouchableOpacity
-                style={{
-                  paddingHorizontal: 10,
-                }}
-                onPress={() => openForm(item)}>
-                <Icon
-                  type="ionicon"
-                  name="create-outline"
-                  color={colors.secondary}
-                  size={20}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={{
-                  paddingHorizontal: 10,
-                }}
-                onPress={() => deleteData(item.id)}>
-                <Icon
-                  type="ionicon"
-                  name="trash-outline"
-                  color={colors.danger}
-                  size={20}
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-        ListEmptyComponent={
-          <Text style={{textAlign: 'center', marginTop: 20}}>
-            Tidak ada pelanggan
-          </Text>
-        }
-      />
-
-      <View style={{padding: 20}}>
-        <MyButton title="Tambah Pelanggan" onPress={() => openForm()} />
-      </View>
+        </>
+      )}
 
       <RBSheet
         ref={refRBSheet}
-        onClose={() => setKontak([])}
+        onClose={() => {
+          if (route.params?.add) {
+            navigation.goBack();
+          }
+          setKontak([]);
+        }}
         closeOnDragDown={true}
         closeOnPressMask={true}
         closeOnPressBack={true}
         height={windowHeight}
         customStyles={{
-          container: {borderTopLeftRadius: 20, borderTopRightRadius: 20},
+          container: {borderTopLeftRadius: 0, borderTopRightRadius: 0},
         }}>
         <View style={{padding: 20}}>
           <Text style={styles.label}>
@@ -508,7 +523,7 @@ export default function DataKustomer({navigation, route}) {
           <MyButton title="Simpan" onPress={saveData} />
         </View>
       </RBSheet>
-    </SafeAreaView>
+    </View>
   );
 }
 

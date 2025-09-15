@@ -28,10 +28,10 @@ const MyPicker = ({
   const [searchText, setSearchText] = useState('');
 
   // Validate and process data
-  const processData = useCallback((rawData) => {
+  const processData = useCallback(rawData => {
     try {
       if (!Array.isArray(rawData)) return [];
-      
+
       return rawData.filter(item => {
         return (
           item &&
@@ -59,7 +59,11 @@ const MyPicker = ({
   // Update selected item when value changes
   useEffect(() => {
     try {
-      if ((!value && value !== 0) || !Array.isArray(dataList) || dataList.length === 0) {
+      if (
+        (!value && value !== 0) ||
+        !Array.isArray(dataList) ||
+        dataList.length === 0
+      ) {
         setSelectedItem(null);
         return;
       }
@@ -80,76 +84,84 @@ const MyPicker = ({
   }, [value, dataList]);
 
   // Handle item selection
-  const handleItemPress = useCallback((item) => {
-    try {
-      if (!item || (!item.value && item.value !== 0)) return;
+  const handleItemPress = useCallback(
+    item => {
+      try {
+        if (!item || (!item.value && item.value !== 0)) return;
 
-      setSelectedItem(item);
-      
-      if (typeof onChangeText === 'function') {
-        onChangeText(item.value);
+        setSelectedItem(item);
+
+        if (typeof onChangeText === 'function') {
+          onChangeText(item.value);
+        }
+
+        if (typeof onValueChange === 'function') {
+          onValueChange(item.value);
+        }
+
+        setModalVisible(false);
+        setSearchText('');
+        setDataList(processData(data));
+      } catch (error) {
+        console.warn('MyPicker: Error handling item press', error);
       }
-      
-      if (typeof onValueChange === 'function') {
-        onValueChange(item.value);
-      }
-      
-      setModalVisible(false);
-      setSearchText('');
-      setDataList(processData(data));
-    } catch (error) {
-      console.warn('MyPicker: Error handling item press', error);
-    }
-  }, [onChangeText, onValueChange, data, processData]);
+    },
+    [onChangeText, onValueChange, data, processData],
+  );
 
   // Render item
-  const renderItem = useCallback(({item, index}) => {
-    try {
-      if (!item || !item.label) return null;
+  const renderItem = useCallback(
+    ({item, index}) => {
+      try {
+        if (!item || !item.label) return null;
 
-      return (
-        <TouchableOpacity
-          key={item.value || index}
-          style={styles.itemContainer}
-          onPress={() => handleItemPress(item)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.itemText} numberOfLines={2}>
-            {String(item.label)}
-          </Text>
-        </TouchableOpacity>
-      );
-    } catch (error) {
-      console.warn('MyPicker: Error rendering item', error);
-      return null;
-    }
-  }, [handleItemPress]);
+        return (
+          <TouchableOpacity
+            key={item.value || index}
+            style={styles.itemContainer}
+            onPress={() => handleItemPress(item)}
+            activeOpacity={0.7}>
+            <Text style={styles.itemText} numberOfLines={2}>
+              {String(item.label)}
+            </Text>
+          </TouchableOpacity>
+        );
+      } catch (error) {
+        console.warn('MyPicker: Error rendering item', error);
+        return null;
+      }
+    },
+    [handleItemPress],
+  );
 
   // Handle search
-  const handleSearch = useCallback((searchValue) => {
-    try {
-      const searchStr = String(searchValue || '').toLowerCase();
-      setSearchText(searchValue || '');
-      
-      if (!searchStr) {
-        setDataList(processData(data));
-        return;
-      }
+  const handleSearch = useCallback(
+    searchValue => {
+      try {
+        const searchStr = String(searchValue || '').toLowerCase();
+        setSearchText(searchValue || '');
 
-      const filtered = processData(data).filter(item => {
-        try {
-          return String(item.label).toLowerCase().includes(searchStr);
-        } catch (error) {
-          return false;
+        if (!searchStr) {
+          setDataList(processData(data));
+          return;
         }
-      });
-      
-      setDataList(filtered);
-    } catch (error) {
-      console.warn('MyPicker: Error filtering data', error);
-      setDataList(processData(data));
-    }
-  }, [data, processData]);
+
+        const filtered = processData(data).filter(item => {
+          try {
+            return String(item.label).toLowerCase().includes(searchStr);
+          } catch (error) {
+            return false;
+          }
+        });
+
+        setDataList(filtered);
+      } catch (error) {
+        console.warn('MyPicker: Error filtering data', error);
+        setDataList(processData(data));
+      }
+    },
+    [data, processData],
+  );
 
   // Modal handlers
   const openModal = useCallback(() => {
@@ -178,8 +190,8 @@ const MyPicker = ({
       if (selectedItem && selectedItem.label) {
         return String(selectedItem.label);
       }
-      
-      if ((!value && value !== 0) && Array.isArray(data) && data.length > 0) {
+
+      if (!value && value !== 0 && Array.isArray(data) && data.length > 0) {
         const foundItem = data.find(item => {
           try {
             return String(item.value) === String(value);
@@ -187,12 +199,12 @@ const MyPicker = ({
             return false;
           }
         });
-        
+
         if (foundItem && foundItem.label) {
           return String(foundItem.label);
         }
       }
-      
+
       return String(placeholder);
     } catch (error) {
       console.warn('MyPicker: Error getting display text', error);
@@ -218,18 +230,13 @@ const MyPicker = ({
   return (
     <View style={styles.container}>
       {/* Label */}
-      {label ? (
-        <Text style={styles.labelText}>
-          {String(label)}
-        </Text>
-      ) : null}
+      {label ? <Text style={styles.labelText}>{String(label)}</Text> : null}
 
       {/* Picker Button */}
       <TouchableOpacity
         style={styles.pickerContainer}
         onPress={openModal}
-        activeOpacity={0.7}
-      >
+        activeOpacity={0.7}>
         {/* Left Icon */}
         {iconname ? (
           <View style={styles.iconContainer}>
@@ -241,19 +248,18 @@ const MyPicker = ({
             />
           </View>
         ) : null}
-        
+
         {/* Display Text */}
-        <Text 
+        <Text
           style={[
             styles.selectedText,
             isPlaceholder && styles.placeholderText,
-            !iconname && styles.selectedTextNoIcon
+            !iconname && styles.selectedTextNoIcon,
           ]}
-          numberOfLines={1}
-        >
+          numberOfLines={1}>
           {displayText}
         </Text>
-        
+
         {/* Dropdown Icon */}
         <View style={styles.iconContainer}>
           <Icon
@@ -270,8 +276,7 @@ const MyPicker = ({
         transparent={true}
         visible={modalVisible}
         onRequestClose={closeModal}
-        animationType="slide"
-      >
+        animationType="slide">
         <TouchableWithoutFeedback onPress={closeModal}>
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
@@ -284,8 +289,7 @@ const MyPicker = ({
                   <TouchableOpacity
                     style={styles.closeButton}
                     onPress={closeModal}
-                    activeOpacity={0.7}
-                  >
+                    activeOpacity={0.7}>
                     <Icon
                       type="ionicon"
                       name="close"
@@ -313,7 +317,9 @@ const MyPicker = ({
                     keyExtractor={keyExtractor}
                     style={styles.flatList}
                     showsVerticalScrollIndicator={false}
-                    ItemSeparatorComponent={() => <View style={styles.separator} />}
+                    ItemSeparatorComponent={() => (
+                      <View style={styles.separator} />
+                    )}
                     removeClippedSubviews={true}
                     maxToRenderPerBatch={10}
                     windowSize={10}
@@ -327,15 +333,18 @@ const MyPicker = ({
                       size={48}
                     />
                     <Text style={styles.emptyText}>
-                      {searchText ? 'Tidak ada hasil pencarian' : 'Tidak ada data tersedia'}
+                      {searchText
+                        ? 'Tidak ada hasil pencarian'
+                        : 'Tidak ada data tersedia'}
                     </Text>
                     {searchText ? (
                       <TouchableOpacity
                         style={styles.clearSearchButton}
                         onPress={() => handleSearch('')}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={styles.clearSearchText}>Hapus Pencarian</Text>
+                        activeOpacity={0.7}>
+                        <Text style={styles.clearSearchText}>
+                          Hapus Pencarian
+                        </Text>
                       </TouchableOpacity>
                     ) : null}
                   </View>
@@ -355,7 +364,7 @@ const styles = StyleSheet.create({
   },
   labelText: {
     fontFamily: fonts.secondary[600],
-    fontSize: 14,
+    fontSize: 12,
     color: colors.black,
     marginBottom: 4,
     marginVertical: 10,
@@ -378,7 +387,7 @@ const styles = StyleSheet.create({
   },
   selectedText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 12,
     lineHeight: 26,
     fontFamily: fonts.secondary[600],
     color: colors.black,
@@ -405,7 +414,7 @@ const styles = StyleSheet.create({
     maxHeight: '70%',
     elevation: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 5 },
+    shadowOffset: {width: 0, height: 5},
     shadowOpacity: 0.25,
     shadowRadius: 10,
   },

@@ -64,10 +64,9 @@ export default function Pelanggan({navigation, route}) {
   };
 
   return (
-    <SafeAreaView
+    <View
       style={{
         flex: 1,
-        backgroundColor: colors.white,
       }}>
       <MyHeader title="Customer" />
       <View
@@ -200,7 +199,7 @@ export default function Pelanggan({navigation, route}) {
           title="Tambah"
         />
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

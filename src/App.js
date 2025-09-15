@@ -14,9 +14,9 @@ export default function App() {
   return (
     <NavigationContainer>
       <StatusBar
-        hidden
-        backgroundColor={colors.white}
-        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent={true}
+        barStyle="light-content"
       />
       <ToastProvider
         duration={2000}
