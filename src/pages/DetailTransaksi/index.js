@@ -16,6 +16,7 @@ import {
   MyCalendar,
   MyInput,
 } from '../../components';
+import {Icon} from 'react-native-elements';
 import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
 import {useToast} from 'react-native-toast-notifications';
 import SQLite from 'react-native-sqlite-storage';
@@ -28,18 +29,35 @@ import {useRef} from 'react';
 export default function DetailTransaksi({navigation, route}) {
   const toast = useToast();
   const [editId, setEditId] = useState(null);
+
+  // Options untuk status dropdown
+  const [transaction, setTransaction] = useState(route.params);
+  const [kirim, setKirim] = useState({
+    fid_transaksi: transaction.id,
+    tanggal_bayar: moment().format('YYYY-MM-DD').toString(),
+    total: '',
+    catatan: '',
+  });
   const refRBSheet = useRef();
 
   const db = SQLite.openDatabase(
     {name: 'azeraf.db', location: 'default'},
-    () => console.log('DB Opened'),
+    () => {},
     err => console.log('SQL Error:', err),
   );
 
   // Ambil data transaksi dari parameter
-  const transaction = route.params;
-  console.log(transaction);
 
+  console.log(transaction);
+  const createTable = () => {
+    db.transaction(tx => {
+      tx.executeSql(
+        `CREATE TABLE IF NOT EXISTS transaksi_bayar (id INTEGER PRIMARY KEY AUTOINCREMENT, fid_transaksi INTEGER NOT NULL, tanggal_bayar TEXT NOT NULL, total DECIMAL(10,2), catatan TEXT, FOREIGN KEY (fid_transaksi) REFERENCES transaksi(id));`,
+      );
+    });
+  };
+
+  const [bayar, setBayar] = useState([]);
   const getData = () => {
     db.transaction(tx => {
       tx.executeSql(
@@ -65,7 +83,8 @@ export default function DetailTransaksi({navigation, route}) {
           for (let i = 0; i < rows.length; i++) {
             temp.push(rows.item(i));
           }
-          console.log('bayar', temp);
+
+          setBayar(temp);
         },
       );
     });
@@ -79,13 +98,6 @@ export default function DetailTransaksi({navigation, route}) {
   // State untuk foto bukti kerja
   const [buktiKerja, setBuktiKerja] = useState(null);
 
-  // Options untuk status dropdown
-  const [kirim, setKirim] = useState({
-    fid_transaksi: transaction.id,
-    tanggal_bayar: moment().format('YYYY-MM-DD'),
-    total: '',
-    catatan: '',
-  });
   const saveData = () => {
     if (!kirim.total) {
       toast.show('Total Belum disi', {
@@ -101,66 +113,150 @@ export default function DetailTransaksi({navigation, route}) {
       return;
     }
 
-    console.log(kirim);
-
-    if (editId) {
-      db.transaction(tx => {
-        tx.executeSql(
-          'UPDATE device SET nama_device=? WHERE id=?',
-          [namaDevice, editId],
-          () => {
-            getData();
-            refRBSheet.current.close();
-            setNamaDevice('');
-            setEditId(null);
-          },
-        );
+    if (!kirim.tanggal_bayar) {
+      toast.show('Tanggal Belum disi', {
+        type: 'danger',
       });
-    } else {
-      db.transaction(tx => {
-        tx.executeSql(
-          'INSERT INTO transaksi_bayar(fid_transaksi,tanggal_bayar,total,catatan) VALUES (?,?,?,?)',
-          [
-            kirim.fid_transaksi,
-            kirim.tanggal_bayar,
-            kirim.total,
-            kirim.catatan,
-          ],
-          (tx, res) => {
-            console.log(res);
-            refRBSheet.current.close();
-            getData();
-            toast.show('Data berhasil disimpan !', {
-              type: 'success',
-            });
-          },
-        );
-      });
+      return;
     }
+
+    let totalALL = parseFloat(totalBayar) + parseFloat(kirim.total);
+    if (totalALL > transaction.total) {
+      toast.show('Total bayar melebihi total transaksi !', {
+        type: 'danger',
+      });
+      return;
+    }
+
+    db.transaction(tx => {
+      let sql = `INSERT INTO transaksi_bayar(fid_transaksi,tanggal_bayar,total,catatan) VALUES ('${transaction.id}','${kirim.tanggal_bayar}','${kirim.total}','${kirim.catatan}')`;
+      console.log(sql);
+      tx.executeSql(sql, [], (tx, res) => {
+        console.log(res);
+        refRBSheet.current.close();
+
+        setKirim({
+          fid_transaksi: transaction.id,
+          tanggal_bayar: moment().format('YYYY-MM-DD').toString(),
+          total: '',
+          catatan: '',
+        });
+        getData();
+
+        if (
+          parseFloat(totalBayar) +
+            parseFloat(kirim.total) -
+            parseFloat(transaction.total) ==
+          0
+        ) {
+          db.transaction(tx => {
+            tx.executeSql(
+              `UPDATE transaksi SET status='Lunas' WHERE id='${transaction.id}'`,
+              [],
+              () => {
+                setTransaction({
+                  ...transaction,
+                  status: 'Lunas',
+                });
+                getData();
+              },
+            );
+          });
+        } else {
+          db.transaction(tx => {
+            tx.executeSql(
+              `UPDATE transaksi SET status='Belum Lunas' WHERE id='${transaction.id}'`,
+              [],
+              () => {
+                setTransaction({
+                  ...transaction,
+                  status: 'Belum Lunas',
+                });
+                getData();
+              },
+            );
+          });
+        }
+        toast.show('Data berhasil disimpan !', {
+          type: 'success',
+        });
+      });
+    });
   };
   // Fungsi untuk format harga
   const formatPrice = price => {
     return `Rp ${price.toLocaleString('id-ID')}`;
   };
 
+  const totalBayar = Array.isArray(bayar)
+    ? bayar.reduce((sum, item) => sum + parseFloat(item.total || 0), 0)
+    : 0;
+
   const [data, setData] = useState([]);
-  const openForm = item => {
-    if (item) {
-      setKirim(item);
-      setEditId(item.id);
-    } else {
-      setKirim({
-        fid_transaksi: transaction.id,
-        tanggal_bayar: moment().format('YYYY-MM-DD'),
-        total: '',
-        catatan: '',
-      });
-      setEditId(null);
-    }
+  const openForm = () => {
     refRBSheet.current.open();
   };
 
+  const deleteData = id => {
+    Alert.alert('Konfirmasi', 'Yakin ingin menghapus perangkat ini?', [
+      {text: 'Batal'},
+      {
+        text: 'Hapus',
+        onPress: () => {
+          db.transaction(tx => {
+            tx.executeSql(
+              `DELETE FROM transaksi_bayar WHERE id='${id}'`,
+              [],
+              (tx, res) => {
+                getData();
+
+                if (
+                  parseFloat(totalBayar) +
+                    parseFloat(kirim.total) -
+                    parseFloat(transaction.total) ==
+                  0
+                ) {
+                  db.transaction(tx => {
+                    tx.executeSql(
+                      `UPDATE transaksi SET status='Lunas' WHERE id='${transaction.id}'`,
+                      [],
+                      () => {
+                        setTransaction({
+                          ...transaction,
+                          status: 'Lunas',
+                        });
+                        getData();
+                      },
+                    );
+                  });
+                } else {
+                  db.transaction(tx => {
+                    tx.executeSql(
+                      `UPDATE transaksi SET status='Belum Lunas' WHERE id='${transaction.id}'`,
+                      [],
+                      () => {
+                        setTransaction({
+                          ...transaction,
+                          status: 'Belum Lunas',
+                        });
+                        getData();
+                      },
+                    );
+                  });
+                }
+                toast.show('Data berhasil dihapus !', {
+                  type: 'success',
+                });
+              },
+            );
+          });
+        },
+      },
+    ]);
+  };
+
   useEffect(() => {
+    createTable();
     getData();
   }, []);
 
@@ -188,6 +284,8 @@ export default function DetailTransaksi({navigation, route}) {
       </View>
     );
   }
+
+  const [openCatatan, setOpenCatatan] = useState(false);
 
   return (
     <View
@@ -366,11 +464,17 @@ export default function DetailTransaksi({navigation, route}) {
             {/* Nama Customer */}
 
             {/* Biaya */}
-            <View style={{marginBottom: 10}}>
+            <View
+              style={{
+                marginBottom: 10,
+                flexDirection: 'row',
+                alignItems: 'center',
+              }}>
               <Text
                 style={{
+                  flex: 1,
                   fontFamily: fonts.secondary[600],
-                  fontSize: 14,
+                  fontSize: 12,
                   color: colors.secondary,
                 }}>
                 Total
@@ -379,10 +483,62 @@ export default function DetailTransaksi({navigation, route}) {
               <Text
                 style={{
                   fontFamily: fonts.secondary[800],
-                  fontSize: 20,
+                  fontSize: 16,
                   color: colors.primary,
                 }}>
                 {formatPrice(transaction.total)}
+              </Text>
+            </View>
+
+            <View
+              style={{
+                marginBottom: 10,
+                flexDirection: 'row',
+                alignItems: 'center',
+              }}>
+              <Text
+                style={{
+                  flex: 1,
+                  fontFamily: fonts.secondary[600],
+                  fontSize: 12,
+                  color: colors.secondary,
+                }}>
+                Total Sudah Bayar
+              </Text>
+
+              <Text
+                style={{
+                  fontFamily: fonts.secondary[600],
+                  fontSize: 16,
+                  color: colors.primary,
+                }}>
+                {formatPrice(totalBayar)}
+              </Text>
+            </View>
+
+            <View
+              style={{
+                marginBottom: 10,
+                flexDirection: 'row',
+                alignItems: 'center',
+              }}>
+              <Text
+                style={{
+                  flex: 1,
+                  fontFamily: fonts.secondary[600],
+                  fontSize: 12,
+                  color: colors.secondary,
+                }}>
+                Belum dibayar
+              </Text>
+
+              <Text
+                style={{
+                  fontFamily: fonts.secondary[600],
+                  fontSize: 16,
+                  color: colors.primary,
+                }}>
+                {formatPrice(transaction.total - totalBayar)}
               </Text>
             </View>
 
@@ -398,23 +554,55 @@ export default function DetailTransaksi({navigation, route}) {
               </Text>
               <Text
                 style={{
-                  fontFamily: fonts.secondary[600],
+                  fontFamily: fonts.secondary[800],
                   fontSize: 12,
                   color: colors.black,
+                  backgroundColor:
+                    transaction.status == 'Lunas'
+                      ? colors.success
+                      : colors.danger,
+                  padding: 5,
+                  width: 100,
+                  textAlign: 'center',
+                  borderRadius: 5,
+                  color: colors.white,
                 }}>
                 {transaction.status}
               </Text>
             </View>
 
-            <View style={{marginBottom: 5}}>
-              <Text
+            <View
+              style={{
+                marginVertical: 5,
+                backgroundColor: Color.blueGray[100],
+                padding: 10,
+                borderRadius: 5,
+                flexDirection: 'row',
+              }}>
+              <View
                 style={{
-                  fontFamily: fonts.secondary[600],
-                  fontSize: 12,
-                  color: colors.black,
+                  flex: 1,
                 }}>
-                Catatan : {transaction.keterangan}
-              </Text>
+                <Text
+                  style={{
+                    fontFamily: fonts.secondary[600],
+                    fontSize: 12,
+                    color: colors.black,
+                    flex: 1,
+                  }}>
+                  Catatan :{'\n'} {transaction.keterangan}
+                </Text>
+                {openCatatan && (
+                  <MyInput placeholder="Masukan catatan" nolabel />
+                )}
+              </View>
+              <TouchableOpacity
+                onPress={() => setOpenCatatan(!openCatatan)}
+                style={{
+                  padding: 10,
+                }}>
+                <Icon type="ionicon" name="create-outline" />
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -435,6 +623,66 @@ export default function DetailTransaksi({navigation, route}) {
               }}>
               Riwayat Pembayaran
             </Text>
+            <FlatList
+              data={bayar}
+              renderItem={({item, index}) => {
+                return (
+                  <View
+                    style={{
+                      marginVertical: 5,
+                      padding: 10,
+                      borderWidth: 1,
+                      borderRadius: 10,
+                      borderColor: Color.blueGray[300],
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                    }}>
+                    <View
+                      style={{
+                        flex: 1,
+                      }}>
+                      <Text
+                        style={{
+                          fontFamily: fonts.secondary[600],
+                          fontSize: 12,
+                        }}>
+                        {moment(item.tanggal_bayar).format('DD MMMM YYYY')}
+                      </Text>
+                      <Text
+                        style={{
+                          fontFamily: fonts.secondary[400],
+                          fontSize: 10,
+                        }}>
+                        {item.catatan}
+                      </Text>
+                    </View>
+                    <Text
+                      style={{
+                        fontFamily: fonts.secondary[800],
+                        fontSize: 14,
+                      }}>
+                      {formatPrice(item.total)}
+                    </Text>
+                    <TouchableOpacity
+                      style={{
+                        paddingHorizontal: 10,
+                      }}
+                      onPress={() => {
+                        deleteData(item.id);
+
+                        console.log(item.id);
+                      }}>
+                      <Icon
+                        type="ionicon"
+                        name="trash-outline"
+                        color={colors.danger}
+                        size={20}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                );
+              }}
+            />
 
             <MyButton title="Tambah Pembayaran" onPress={openForm} />
           </View>
@@ -443,11 +691,19 @@ export default function DetailTransaksi({navigation, route}) {
             closeOnDragDown={true}
             closeOnPressMask={true}
             closeOnPressBack={true}
-            height={windowHeight}
+            height={windowHeight / 1.5}
             customStyles={{
+              wrapper: {
+                backgroundColor: 'rgba(0,0,0,0)',
+              },
               container: {borderTopLeftRadius: 20, borderTopRightRadius: 20},
             }}>
-            <View style={{padding: 20}}>
+            <View
+              style={{
+                padding: 20,
+                backgroundColor: Color.blueGray[100],
+                flex: 1,
+              }}>
               <Text
                 style={{
                   ...fonts.headline3,

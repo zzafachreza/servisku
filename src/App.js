@@ -21,7 +21,8 @@ export default function App() {
       <ToastProvider
         duration={2000}
         placement="top"
-        offsetBottom={70}
+        offsetTop={120}
+        offset={1000}
         animationDuration={250}
         animationType="zoom-in"
         successColor={Color.blueGray[50]}
