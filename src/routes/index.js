@@ -105,6 +105,7 @@ import {
   HomePetugas,
   DataService,
   DataKostumer,
+  Cetak,
 } from '../pages';
 import {colors} from '../utils';
 import {Icon} from 'react-native-elements';
@@ -138,7 +139,14 @@ export default function Router() {
         }}
       />
 
-      
+      <Stack.Screen
+        name="Cetak"
+        component={Cetak}
+        options={{
+          headerShown: false,
+        }}
+      />
+
       <Stack.Screen
         name="DataService"
         component={DataService}
@@ -147,7 +155,7 @@ export default function Router() {
         }}
       />
 
-       <Stack.Screen
+      <Stack.Screen
         name="DataKostumer"
         component={DataKostumer}
         options={{
@@ -171,7 +179,6 @@ export default function Router() {
         }}
       />
 
-
       <Stack.Screen
         name="CheckOut"
         component={Checkout}
@@ -180,7 +187,6 @@ export default function Router() {
         }}
       />
 
-      
       <Stack.Screen
         name="ProdukDetail"
         component={ProdukDetail}
@@ -188,8 +194,6 @@ export default function Router() {
           headerShown: false,
         }}
       />
-
-
 
       <Stack.Screen
         name="PelangganAdd"

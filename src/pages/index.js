@@ -50,12 +50,14 @@ import ChoosePage from './ChoosePage';
 import HomePetugas from './HomePetugas';
 import DataService from './dataservice';
 import DataKostumer from './DataKostumer';
+import Cetak from './DetailTransaksi/Cetak';
 
 // NEW
 
 export {
   Splash,
   Profit,
+  Cetak,
   Pelanggan,
   PelangganEdit,
   PelangganAdd,
@@ -100,14 +102,10 @@ export {
   DataLaporan,
   BackupRestore,
   Royalti,
-Checkout,
-ProdukDetail,
-ChoosePage,
-HomePetugas,
-DataService,
-DataKostumer,
-
-
-
-
+  Checkout,
+  ProdukDetail,
+  ChoosePage,
+  HomePetugas,
+  DataService,
+  DataKostumer,
 };

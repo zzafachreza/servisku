@@ -25,6 +25,7 @@ import {useEffect} from 'react';
 import {FlatList} from 'react-native';
 import RBSheet from 'react-native-raw-bottom-sheet';
 import {useRef} from 'react';
+import {MYAPP} from '../../utils/localStorage';
 
 export default function DetailTransaksi({navigation, route}) {
   const toast = useToast();
@@ -38,6 +39,94 @@ export default function DetailTransaksi({navigation, route}) {
     total: '',
     catatan: '',
   });
+
+  const [kirimCart, setkirimCart] = useState({
+    id: null, // untuk tracking item yang sedang diedit
+    device: '',
+    kerusakan: '',
+    harga: 0,
+    diskon: 0,
+    total: 0,
+    catatan: '',
+  });
+
+  const saveUpdate = () => {
+    console.log(kirimUpdate);
+    db.transaction(tx => {
+      let sql = '';
+      if (kirimUpdate.id !== null) {
+        sql = `UPDATE transaksi_detail SET device='${kirimUpdate.device}',harga='${kirimUpdate.harga}',diskon='${kirimUpdate.diskon}',total='${kirimUpdate.total}',catatan='${kirimUpdate.catatan}' WHERE id='${kirimUpdate.id}'`;
+      } else {
+        sql = `INSERT INTO transaksi_detail(fid_transaksi,device,harga,diskon,total,catatan) VALUES('${transaction.id}','${kirimUpdate.device}','${kirimUpdate.harga}','${kirimUpdate.diskon}','${kirimUpdate.total}','${kirimUpdate.catatan}')`;
+      }
+
+      console.log(sql);
+      let sql2 = `UPDATE transaksi SET total_bruto=(SELECT SUM(harga) FROM transaksi_detail WHERE fid_transaksi='${transaction.id}'),total_diskon=(SELECT SUM(diskon) FROM transaksi_detail WHERE fid_transaksi='${transaction.id}'),total=(SELECT SUM(total) FROM transaksi_detail WHERE fid_transaksi='${transaction.id}') WHERE id='${transaction.id}'`;
+      tx.executeSql(sql, [], (tx, res) => {
+        tx.executeSql(sql2, [], (tx, res) => {
+          console.log(res);
+          refRBSheet.current.close();
+          setOpenUpdateItem(false);
+
+          getData();
+          toast.show('Data berhasil disimpan !', {
+            type: 'success',
+          });
+        });
+      });
+    });
+  };
+
+  const [deveice, setDevice] = useState([]);
+  const getDevice = () => {
+    db.transaction(tx => {
+      tx.executeSql('SELECT * FROM device ORDER BY id DESC', [], (tx, res) => {
+        let rows = res.rows;
+        let temp = [];
+        for (let i = 0; i < rows.length; i++) {
+          temp.push(rows.item(i));
+        }
+        console.log(temp);
+        setDevice(temp);
+      });
+    });
+  };
+
+  const deleteCartItem = zz => {
+    Alert.alert(MYAPP, 'Apakah kamu yakin akan hapus ini ?', [
+      {text: 'TIDAK'},
+      {
+        text: 'YA, HAPUS',
+        onPress: () => {
+          db.transaction(tx => {
+            let sql = `DELETE FROM transaksi_detail WHERE id='${zz}'`;
+
+            let sql2 = `UPDATE transaksi SET total_bruto=(SELECT SUM(harga) FROM transaksi_detail WHERE fid_transaksi='${transaction.id}'),total_diskon=(SELECT SUM(diskon) FROM transaksi_detail WHERE fid_transaksi='${transaction.id}'),total=(SELECT SUM(total) FROM transaksi_detail WHERE fid_transaksi='${transaction.id}') WHERE id='${transaction.id}'`;
+            tx.executeSql(sql, [], (tx, res) => {
+              console.log(sql2);
+              tx.executeSql(sql2, [], (tx, res) => {
+                console.log(res);
+                refRBSheet.current.close();
+                setOpenUpdateItem(false);
+
+                getData();
+                toast.show('Data berhasil disimpan !', {
+                  type: 'success',
+                });
+              });
+            });
+          });
+        },
+      },
+    ]);
+  };
+
+  const [kirimUpdate, setKirimUpdate] = useState({});
+  const [openUpdateItem, setOpenUpdateItem] = useState(false);
+  const editCartItem = item => {
+    console.log(item);
+  };
+
   const refRBSheet = useRef();
 
   const db = SQLite.openDatabase(
@@ -60,6 +149,20 @@ export default function DetailTransaksi({navigation, route}) {
   const [bayar, setBayar] = useState([]);
   const getData = () => {
     db.transaction(tx => {
+      tx.executeSql(
+        `SELECT a.id,nama,telepon,a.tanggal,alamat,kode,total,status,total_bruto,total_diskon,keterangan FROM transaksi a JOIN customer b ON a.fid_customer = b.id  WHERE a.id='${transaction.id}' limit 1`,
+        [],
+        (tx, res) => {
+          let rows = res.rows;
+          let temp = [];
+          for (let i = 0; i < rows.length; i++) {
+            temp.push(rows.item(i));
+          }
+
+          setTransaction(temp[0]);
+        },
+      );
+
       tx.executeSql(
         `SELECT * FROM transaksi_detail  WHERE fid_transaksi='${transaction.id}' ORDER BY id DESC`,
         [],
@@ -94,9 +197,6 @@ export default function DetailTransaksi({navigation, route}) {
   const [selectedStatus, setSelectedStatus] = useState(
     transaction?.status || 'pending',
   );
-
-  // State untuk foto bukti kerja
-  const [buktiKerja, setBuktiKerja] = useState(null);
 
   const saveData = () => {
     if (!kirim.total) {
@@ -183,6 +283,36 @@ export default function DetailTransaksi({navigation, route}) {
       });
     });
   };
+
+  const updateCatatan = () => {
+    db.transaction(tx => {
+      let sql = `UPDATE transaksi SET keterangan='${transaction.keterangan}' WHERE id='${transaction.id}'`;
+      console.log(sql);
+      tx.executeSql(sql, [], (tx, res) => {
+        console.log(res);
+        setOpenCatatan(false);
+        getData();
+        toast.show('Data berhasil disimpan !', {
+          type: 'success',
+        });
+      });
+    });
+  };
+
+  const updateTanggal = x => {
+    db.transaction(tx => {
+      let sql = `UPDATE transaksi SET tanggal='${x}' WHERE id='${transaction.id}'`;
+      console.log(sql);
+      tx.executeSql(sql, [], (tx, res) => {
+        console.log(res);
+        setOpenTanggal(false);
+        getData();
+        toast.show('Data berhasil disimpan !', {
+          type: 'success',
+        });
+      });
+    });
+  };
   // Fungsi untuk format harga
   const formatPrice = price => {
     return `Rp ${price.toLocaleString('id-ID')}`;
@@ -258,6 +388,7 @@ export default function DetailTransaksi({navigation, route}) {
   useEffect(() => {
     createTable();
     getData();
+    getDevice();
   }, []);
 
   if (!transaction) {
@@ -286,6 +417,8 @@ export default function DetailTransaksi({navigation, route}) {
   }
 
   const [openCatatan, setOpenCatatan] = useState(false);
+  const [openTanggal, setOpenTanggal] = useState(false);
+  const [deviceHistory, setDeviceHistory] = useState(false);
 
   return (
     <View
@@ -300,6 +433,18 @@ export default function DetailTransaksi({navigation, route}) {
             padding: 20,
           }}>
           {/* Card Detail Transaksi */}
+          <MyButton
+            title="Lihat Invoice"
+            onPress={() =>
+              navigation.navigate('Cetak', {
+                transaksi: transaction,
+                transaksi_detail: data,
+                transaksi_bayar: totalBayar,
+              })
+            }
+            Icons="print-outline"
+          />
+          <MyGap jarak={10} />
           <View
             style={{
               backgroundColor: 'white',
@@ -318,24 +463,57 @@ export default function DetailTransaksi({navigation, route}) {
               }}>
               {transaction.kode}
             </Text>
-            <View style={{marginBottom: 5}}>
-              <Text
-                style={{
-                  fontFamily: fonts.secondary[600],
-                  fontSize: 12,
-                  color: colors.secondary,
-                  marginBottom: 5,
-                }}>
-                Tanggal
-              </Text>
-              <Text
-                style={{
-                  fontFamily: fonts.secondary[600],
-                  fontSize: 12,
-                  color: colors.black,
-                }}>
-                {moment(transaction.tanggal).format('DD MMMM YYYY')}
-              </Text>
+            <View
+              style={{
+                marginTop: 10,
+                flexDirection: 'row',
+                alignItems: 'center',
+              }}>
+              {!openTanggal && (
+                <>
+                  <View style={{marginBottom: 5, flex: 1}}>
+                    <Text
+                      style={{
+                        fontFamily: fonts.secondary[600],
+                        fontSize: 12,
+                        color: colors.secondary,
+                        marginBottom: 5,
+                      }}>
+                      Tanggal
+                    </Text>
+                    <Text
+                      style={{
+                        fontFamily: fonts.secondary[600],
+                        fontSize: 12,
+                        color: colors.black,
+                      }}>
+                      {moment(transaction.tanggal).format('DD MMMM YYYY')}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setOpenTanggal(!openTanggal);
+                    }}>
+                    <Icon type="ionicon" name="create-outline" />
+                  </TouchableOpacity>
+                </>
+              )}
+
+              {openTanggal && (
+                <View style={{flex: 1}}>
+                  <MyCalendar
+                    label="Tanggal"
+                    value={transaction.tanggal}
+                    onDateChange={x => {
+                      setTransaction({
+                        ...transaction,
+                        tanggal: x,
+                      });
+                      updateTanggal(x);
+                    }}
+                  />
+                </View>
+              )}
             </View>
             {/* Nama Customer */}
             <View style={{marginBottom: 5, marginTop: 10}}>
@@ -360,7 +538,39 @@ export default function DetailTransaksi({navigation, route}) {
 
             {/* Tanggal */}
           </View>
-
+          <TouchableOpacity
+            onPress={() => {
+              setOpenUpdateItem(true);
+              setKirimUpdate(kirimCart);
+              refRBSheet.current.open();
+            }}
+            style={{
+              marginVertical: 10,
+              backgroundColor: colors.secondary,
+              padding: 10,
+              flex: 1,
+              marginRight: 5,
+              justifyContent: 'center',
+              alignItems: 'center',
+              borderRadius: 5,
+              flexDirection: 'row',
+            }}>
+            <Text
+              style={{
+                right: 4,
+                fontFamily: fonts.secondary[600],
+                color: colors.white,
+                fontSize: 12,
+              }}>
+              Tambah Item
+            </Text>
+            <Icon
+              type="ionicon"
+              name="add-circle-outline"
+              color={colors.white}
+              size={15}
+            />
+          </TouchableOpacity>
           {/* Update Status Section */}
           <View
             style={{
@@ -445,6 +655,43 @@ export default function DetailTransaksi({navigation, route}) {
                           Catatan: {item.catatan}
                         </Text>
                       )}
+                    </View>
+
+                    <View style={{flexDirection: 'row'}}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setOpenUpdateItem(true);
+                          refRBSheet.current.open();
+                          editCartItem(item);
+                          setKirimUpdate(item);
+                        }}
+                        style={{
+                          backgroundColor: colors.secondary,
+                          padding: 8,
+                          borderRadius: 5,
+                          marginRight: 5,
+                        }}>
+                        <Icon
+                          type="ionicon"
+                          name="create-outline"
+                          size={16}
+                          color={colors.white}
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => deleteCartItem(item.id)}
+                        style={{
+                          backgroundColor: colors.danger,
+                          padding: 8,
+                          borderRadius: 5,
+                        }}>
+                        <Icon
+                          type="ionicon"
+                          name="trash-outline"
+                          size={16}
+                          color={colors.white}
+                        />
+                      </TouchableOpacity>
                     </View>
                   </View>
                 );
@@ -571,39 +818,54 @@ export default function DetailTransaksi({navigation, route}) {
               </Text>
             </View>
 
-            <View
-              style={{
-                marginVertical: 5,
-                backgroundColor: Color.blueGray[100],
-                padding: 10,
-                borderRadius: 5,
-                flexDirection: 'row',
-              }}>
+            {!openCatatan && (
               <View
                 style={{
-                  flex: 1,
+                  marginVertical: 5,
+                  backgroundColor: Color.blueGray[100],
+                  padding: 10,
+                  borderRadius: 5,
+                  flexDirection: 'row',
                 }}>
-                <Text
+                <View
                   style={{
-                    fontFamily: fonts.secondary[600],
-                    fontSize: 12,
-                    color: colors.black,
                     flex: 1,
                   }}>
-                  Catatan :{'\n'} {transaction.keterangan}
-                </Text>
-                {openCatatan && (
-                  <MyInput placeholder="Masukan catatan" nolabel />
-                )}
+                  <Text
+                    style={{
+                      fontFamily: fonts.secondary[600],
+                      fontSize: 12,
+                      color: colors.black,
+                      flex: 1,
+                    }}>
+                    Catatan :{'\n'} {transaction.keterangan}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setOpenCatatan(!openCatatan)}
+                  style={{
+                    padding: 10,
+                  }}>
+                  <Icon type="ionicon" name="create-outline" />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                onPress={() => setOpenCatatan(!openCatatan)}
-                style={{
-                  padding: 10,
-                }}>
-                <Icon type="ionicon" name="create-outline" />
-              </TouchableOpacity>
-            </View>
+            )}
+            {openCatatan && (
+              <View>
+                <MyInput
+                  placeholder="Masukan catatan"
+                  value={transaction.keterangan}
+                  nolabel
+                  onChangeText={x =>
+                    setTransaction({
+                      ...transaction,
+                      keterangan: x,
+                    })
+                  }
+                />
+                <MyButton onPress={updateCatatan} title="Simpan Catatan" />
+              </View>
+            )}
           </View>
 
           <View
@@ -688,6 +950,7 @@ export default function DetailTransaksi({navigation, route}) {
           </View>
           <RBSheet
             ref={refRBSheet}
+            onClose={() => setOpenUpdateItem(false)}
             closeOnDragDown={true}
             closeOnPressMask={true}
             closeOnPressBack={true}
@@ -708,41 +971,233 @@ export default function DetailTransaksi({navigation, route}) {
                 style={{
                   ...fonts.headline3,
                 }}>
-                {editId ? 'Edit Pembayaran' : 'Tambah Pembayaran'}
+                {openUpdateItem && kirimUpdate.id !== null
+                  ? 'Update Perangkat'
+                  : kirimUpdate.id === null
+                  ? 'Tambah Perangkat'
+                  : 'Tambah Pembayaran'}
               </Text>
-              <MyCalendar
-                label="Tanggal Bayar"
-                value={kirim.tanggal_bayar}
-                onDateChange={x =>
-                  setKirim({
-                    ...kirim,
-                    tanggal_bayar: x,
-                  })
-                }
-              />
-              <MyInput
-                label="Total"
-                keyboardType="number-pad"
-                value={kirim.total}
-                onChangeText={x =>
-                  setKirim({
-                    ...kirim,
-                    total: x,
-                  })
-                }
-              />
+              {!openUpdateItem && (
+                <>
+                  <MyCalendar
+                    label="Tanggal Bayar"
+                    value={kirim.tanggal_bayar}
+                    onDateChange={x =>
+                      setKirim({
+                        ...kirim,
+                        tanggal_bayar: x,
+                      })
+                    }
+                  />
+                  <MyInput
+                    label="Total"
+                    keyboardType="number-pad"
+                    value={kirim.total}
+                    onChangeText={x =>
+                      setKirim({
+                        ...kirim,
+                        total: x,
+                      })
+                    }
+                  />
 
-              <MyInput
-                label="Catatan"
-                value={kirim.catatan}
-                onChangeText={x =>
-                  setKirim({
-                    ...kirim,
-                    catatan: x,
-                  })
-                }
+                  <MyInput
+                    label="Catatan"
+                    value={kirim.catatan}
+                    onChangeText={x =>
+                      setKirim({
+                        ...kirim,
+                        catatan: x,
+                      })
+                    }
+                  />
+                </>
+              )}
+
+              {openUpdateItem && (
+                <ScrollView>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                    }}>
+                    <View
+                      style={{
+                        flex: 1,
+                      }}>
+                      <MyInput
+                        label="Nama Perangkat"
+                        placeholder="Masukan perangkat"
+                        value={kirimUpdate.device}
+                        onChangeText={x =>
+                          setKirimUpdate({
+                            ...kirimUpdate,
+                            device: x,
+                          })
+                        }
+                      />
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => setDeviceHistory(!deviceHistory)}
+                      style={{
+                        height: 50,
+                        backgroundColor: colors.primary,
+                        padding: 10,
+                        width: 50,
+                        top: 30,
+                        borderRadius: 10,
+                        marginLeft: 5,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                      }}>
+                      <Icon
+                        type="ionicon"
+                        size={24}
+                        name={
+                          deviceHistory
+                            ? 'close-circle-outline'
+                            : 'receipt-outline'
+                        }
+                        color={colors.white}
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  {deviceHistory && (
+                    <View
+                      style={{
+                        height: windowHeight / 2,
+                        padding: 5,
+                      }}>
+                      <Text
+                        style={{
+                          fontFamily: fonts.secondary[600],
+                          fontSize: 12,
+                          color: colors.black,
+                        }}>
+                        Daftar Perangkat tersimpan
+                      </Text>
+                      <FlatList
+                        data={deveice}
+                        renderItem={({item, index}) => {
+                          return (
+                            <TouchableOpacity
+                              onPress={() => {
+                                setKirimUpdate({
+                                  ...kirimUpdate,
+                                  device: item.nama_device,
+                                });
+                                setDeviceHistory(false);
+                              }}
+                              style={{
+                                padding: 10,
+                                borderRadius: 5,
+                                marginVertical: 4,
+                                backgroundColor: colors.secondary,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                              }}>
+                              <Text
+                                style={{
+                                  flex: 1,
+                                  fontFamily: fonts.secondary[600],
+                                  fontSize: 12,
+                                  color: colors.white,
+                                }}>
+                                {item.nama_device}
+                              </Text>
+                              <Icon
+                                type="ionicon"
+                                name="chevron-forward-circle-outline"
+                                color={colors.white}
+                              />
+                            </TouchableOpacity>
+                          );
+                        }}
+                      />
+                    </View>
+                  )}
+
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                    }}>
+                    <View
+                      style={{
+                        flex: 1,
+                        paddingRight: 5,
+                      }}>
+                      <MyInput
+                        label="Harga"
+                        keyboardType="number-pad"
+                        onChangeText={x =>
+                          setKirimUpdate({
+                            ...kirimUpdate,
+                            total: x - parseFloat(kirimUpdate.diskon),
+                            harga: x,
+                          })
+                        }
+                        value={kirimUpdate.harga.toString()}
+                      />
+                    </View>
+                    <View
+                      style={{
+                        flex: 1,
+                        paddingLeft: 5,
+                      }}>
+                      <MyInput
+                        label="Diskon"
+                        keyboardType="number-pad"
+                        onChangeText={x =>
+                          setKirimUpdate({
+                            ...kirimUpdate,
+                            diskon: x,
+                            total: parseFloat(kirimUpdate.harga) - x,
+                          })
+                        }
+                        value={kirimUpdate.diskon.toString()}
+                      />
+                    </View>
+                  </View>
+                  <View
+                    style={{
+                      borderRadius: 5,
+                      flexDirection: 'row',
+                      marginVertical: 5,
+                      padding: 10,
+                      backgroundColor: colors.primary + '20',
+                    }}>
+                    <Text
+                      style={{
+                        flex: 1,
+                        fontFamily: fonts.secondary[600],
+                        fontSize: 12,
+                      }}>
+                      Total
+                    </Text>
+                    <Text
+                      style={{
+                        fontFamily: fonts.secondary[800],
+                        fontSize: 18,
+                      }}>
+                      {formatPrice(kirimUpdate.total)}
+                    </Text>
+                  </View>
+                  <MyInput
+                    label="Catatan"
+                    value={kirimUpdate.catatan}
+                    onChangeText={x =>
+                      setKirimUpdate({
+                        ...kirimUpdate,
+                        catatan: x,
+                      })
+                    }
+                  />
+                </ScrollView>
+              )}
+              <MyButton
+                title="Simpan"
+                onPress={openUpdateItem ? saveUpdate : saveData}
               />
-              <MyButton title="Simpan" onPress={saveData} />
             </View>
           </RBSheet>
           <MyGap jarak={20} />

@@ -37,7 +37,7 @@ export default function Transaksi({navigation, route}) {
   const getData = () => {
     db.transaction(tx => {
       tx.executeSql(
-        'SELECT a.id,nama,telepon,alamat,kode,total,status,total_bruto,total_diskon,keterangan FROM transaksi a JOIN customer b ON a.fid_customer = b.id ORDER BY a.id DESC',
+        'SELECT a.id,nama,telepon,a.tanggal,alamat,kode,total,status,total_bruto,total_diskon,keterangan FROM transaksi a JOIN customer b ON a.fid_customer = b.id ORDER BY a.id DESC',
         [],
         (tx, res) => {
           let rows = res.rows;
@@ -220,18 +220,7 @@ export default function Transaksi({navigation, route}) {
                       size={20}
                     />
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={{
-                      paddingHorizontal: 10,
-                    }}
-                    onPress={() => openForm(item)}>
-                    <Icon
-                      type="ionicon"
-                      name="create-outline"
-                      color={colors.secondary}
-                      size={20}
-                    />
-                  </TouchableOpacity>
+
                   <TouchableOpacity
                     style={{
                       paddingHorizontal: 10,
