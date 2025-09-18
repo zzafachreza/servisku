@@ -43,6 +43,7 @@ export default function DetailTransaksi({navigation, route}) {
   const [kirimCart, setkirimCart] = useState({
     id: null, // untuk tracking item yang sedang diedit
     device: '',
+    serial: '',
     kerusakan: '',
     harga: 0,
     diskon: 0,
@@ -55,9 +56,9 @@ export default function DetailTransaksi({navigation, route}) {
     db.transaction(tx => {
       let sql = '';
       if (kirimUpdate.id !== null) {
-        sql = `UPDATE transaksi_detail SET device='${kirimUpdate.device}',harga='${kirimUpdate.harga}',diskon='${kirimUpdate.diskon}',total='${kirimUpdate.total}',catatan='${kirimUpdate.catatan}' WHERE id='${kirimUpdate.id}'`;
+        sql = `UPDATE transaksi_detail SET device='${kirimUpdate.device}',harga='${kirimUpdate.harga}',serial='${kirimUpdate.serial}',kerusakan='${kirimUpdate.kerusakan}',diskon='${kirimUpdate.diskon}',total='${kirimUpdate.total}',catatan='${kirimUpdate.catatan}' WHERE id='${kirimUpdate.id}'`;
       } else {
-        sql = `INSERT INTO transaksi_detail(fid_transaksi,device,harga,diskon,total,catatan) VALUES('${transaction.id}','${kirimUpdate.device}','${kirimUpdate.harga}','${kirimUpdate.diskon}','${kirimUpdate.total}','${kirimUpdate.catatan}')`;
+        sql = `INSERT INTO transaksi_detail(fid_transaksi,device,serial,kerusakan,harga,diskon,total,catatan) VALUES('${transaction.id}','${kirimUpdate.device}','${kirimUpdate.serial}','${kirimUpdate.kerusakan}','${kirimUpdate.harga}','${kirimUpdate.diskon}','${kirimUpdate.total}','${kirimUpdate.catatan}')`;
       }
 
       console.log(sql);
@@ -321,6 +322,53 @@ export default function DetailTransaksi({navigation, route}) {
   const totalBayar = Array.isArray(bayar)
     ? bayar.reduce((sum, item) => sum + parseFloat(item.total || 0), 0)
     : 0;
+
+  const bayarLunas = () => {
+    let bayarin = transaction.total - totalBayar;
+    console.log(bayarin);
+    Alert.alert(MYAPP, 'Bayar lunas langsung ?', [
+      {
+        text: 'tidak',
+      },
+      {
+        text: 'YA, LUNAS',
+        onPress: () => {
+          db.transaction(tx => {
+            let sql = `INSERT INTO transaksi_bayar(fid_transaksi,tanggal_bayar,total,catatan) VALUES ('${transaction.id}','${kirim.tanggal_bayar}','${bayarin}','')`;
+            console.log(sql);
+            tx.executeSql(sql, [], (tx, res) => {
+              console.log(res);
+              refRBSheet.current.close();
+
+              setKirim({
+                fid_transaksi: transaction.id,
+                tanggal_bayar: moment().format('YYYY-MM-DD').toString(),
+                total: '',
+                catatan: '',
+              });
+              tx.executeSql(
+                `UPDATE transaksi SET status='Lunas' WHERE id='${transaction.id}'`,
+                [],
+                () => {
+                  setTransaction({
+                    ...transaction,
+                    status: 'Lunas',
+                  });
+                  getData();
+                },
+              );
+
+              getData();
+
+              toast.show('Data berhasil disimpan !', {
+                type: 'success',
+              });
+            });
+          });
+        },
+      },
+    ]);
+  };
 
   const [data, setData] = useState([]);
   const openForm = () => {
@@ -599,9 +647,17 @@ export default function DetailTransaksi({navigation, route}) {
                           fontFamily: fonts.secondary[700],
                           fontSize: 14,
                           color: colors.black,
-                          marginBottom: 5,
                         }}>
                         {item.device}
+                      </Text>
+                      <Text
+                        style={{
+                          fontFamily: fonts.secondary[400],
+                          fontSize: 12,
+                          color: colors.black,
+                          marginBottom: 5,
+                        }}>
+                        SN : {item.serial}
                       </Text>
                       <Text
                         style={{
@@ -816,6 +872,13 @@ export default function DetailTransaksi({navigation, route}) {
                 }}>
                 {transaction.status}
               </Text>
+              {transaction.status !== 'Lunas' && (
+                <MyButton
+                  title="Bayar Lunas"
+                  onPress={bayarLunas}
+                  warna={colors.success}
+                />
+              )}
             </View>
 
             {!openCatatan && (
@@ -1117,6 +1180,29 @@ export default function DetailTransaksi({navigation, route}) {
                     </View>
                   )}
 
+                  <MyInput
+                    label="Serial Number"
+                    placeholder="Masukan serial number"
+                    value={kirimUpdate.serial}
+                    keyboardType="number-pad"
+                    onChangeText={x =>
+                      setKirimUpdate({
+                        ...kirimUpdate,
+                        serial: x,
+                      })
+                    }
+                  />
+                  <MyInput
+                    label="Kerusakan"
+                    placeholder="Masukan kerusakan"
+                    value={kirimUpdate.kerusakan}
+                    onChangeText={x =>
+                      setKirimUpdate({
+                        ...kirimUpdate,
+                        kerusakan: x,
+                      })
+                    }
+                  />
                   <View
                     style={{
                       flexDirection: 'row',

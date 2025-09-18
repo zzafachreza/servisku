@@ -53,7 +53,7 @@ export default function TransaksiAdd({navigation, route}) {
 
     db.transaction(tx => {
       tx.executeSql(
-        `CREATE TABLE IF NOT EXISTS transaksi_detail (id INTEGER PRIMARY KEY AUTOINCREMENT, fid_transaksi INTEGER NOT NULL, device TEXT, kerusakan TEXT, harga DECIMAL(10,2), diskon DECIMAL(10,2), total DECIMAL(10,2), catatan TEXT, FOREIGN KEY (fid_transaksi) REFERENCES transaksi(id));`,
+        `CREATE TABLE IF NOT EXISTS transaksi_detail (id INTEGER PRIMARY KEY AUTOINCREMENT, fid_transaksi INTEGER NOT NULL, device TEXT, serial TEXT, kerusakan TEXT, harga DECIMAL(10,2), diskon DECIMAL(10,2), total DECIMAL(10,2), catatan TEXT, FOREIGN KEY (fid_transaksi) REFERENCES transaksi(id));`,
       );
     });
   };
@@ -129,6 +129,7 @@ export default function TransaksiAdd({navigation, route}) {
     setkirimCart({
       id: null,
       device: '',
+      serial: '',
       kerusakan: '',
       harga: 0,
       diskon: 0,
@@ -276,11 +277,12 @@ export default function TransaksiAdd({navigation, route}) {
             transactionData.items.forEach(item => {
               tx.executeSql(
                 `INSERT INTO transaksi_detail 
-               (fid_transaksi, device, kerusakan, harga, diskon, total, catatan) 
-               VALUES (?, ?, ?, ?, ?, ?, ?)`,
+               (fid_transaksi, device,serial, kerusakan, harga, diskon, total, catatan) 
+               VALUES (?, ?, ?,?, ?, ?, ?, ?)`,
                 [
                   transactionId,
                   item.device,
+                  item.serial,
                   item.kerusakan,
                   parseFloat(item.harga || 0),
                   parseFloat(item.diskon || 0),
@@ -465,9 +467,17 @@ export default function TransaksiAdd({navigation, route}) {
                 fontFamily: fonts.secondary[700],
                 fontSize: 14,
                 color: colors.black,
-                marginBottom: 5,
               }}>
               {item.device}
+            </Text>
+            <Text
+              style={{
+                fontFamily: fonts.secondary[400],
+                fontSize: 12,
+                color: colors.black,
+                marginBottom: 5,
+              }}>
+              SN : {item.serial}
             </Text>
             <Text
               style={{
@@ -886,6 +896,19 @@ export default function TransaksiAdd({navigation, route}) {
                 />
               </View>
             )}
+
+            <MyInput
+              label="Serial Number"
+              placeholder="Masukan serial number"
+              keyboardType="number-pad"
+              value={kirimCart.serial}
+              onChangeText={x =>
+                setkirimCart({
+                  ...kirimCart,
+                  serial: x,
+                })
+              }
+            />
             <MyInput
               label="Kerusakan"
               placeholder="Masukan kerusakan"

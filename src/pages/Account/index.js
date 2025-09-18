@@ -21,6 +21,7 @@ import MyLoading from '../../components/MyLoading';
 import {useToast} from 'react-native-toast-notifications';
 import SQLite from 'react-native-sqlite-storage';
 import RNFS from 'react-native-fs';
+import Share from 'react-native-share';
 
 export default function Account({navigation}) {
   const [kirim, setKirim] = useState({});
@@ -34,6 +35,7 @@ export default function Account({navigation}) {
           nama: '',
           telepon: '',
           alamat: '',
+          catatan: '',
           foto: '',
         });
       } else {
@@ -102,6 +104,17 @@ export default function Account({navigation}) {
             text: 'OK',
             onPress: () => {
               toast.show('Backup database berhasil!', {type: 'success'});
+            },
+          },
+          {
+            text: 'Upload ke Google Drive',
+            onPress: async () => {
+              await Share.open({
+                url: 'file://' + backupPath, // path file backup sqlite
+                type: 'application/octet-stream', // cocok untuk .db / .sqlite
+                title: 'Upload ke Google Drive',
+                subject: 'Database Backup',
+              });
             },
           },
         ],
@@ -275,6 +288,13 @@ export default function Account({navigation}) {
           onChangeText={x => setKirim({...kirim, alamat: x})}
         />
 
+        <MyInput
+          label="Catatan Print"
+          iconname="print-outline"
+          value={kirim.catatan}
+          placeholder="Masukan catatan print"
+          onChangeText={x => setKirim({...kirim, catatan: x})}
+        />
         <MyGap jarak={10} />
         {loading && <MyLoading />}
 
