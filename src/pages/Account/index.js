@@ -56,15 +56,30 @@ export default function Account({navigation}) {
 
   // Fungsi untuk meminta permission di Android
   const requestStoragePermission = async () => {
-    if (Platform.OS === 'android') {
+    if (Platform.OS === 'android' && Platform.Version < 30) {
       try {
-        const granted = true;
+        const granted = await PermissionsAndroid.requestMultiple([
+          PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+        ]);
+
+        const allGranted = Object.values(granted).every(
+          status => status === PermissionsAndroid.RESULTS.GRANTED,
+        );
+
+        if (!allGranted) {
+          console.log('Izin penyimpanan ditolak');
+          return false;
+        }
+
+        return true;
       } catch (err) {
-        console.warn(err);
+        console.warn('Gagal meminta izin:', err);
         return false;
       }
     }
-    return true;
+
+    return true; // Android 11 ke atas tidak butuh izin untuk app directory
   };
 
   // Fungsi Backup Database

@@ -7,7 +7,7 @@ import {
   Alert,
 } from 'react-native';
 import React, {useState} from 'react';
-import {Color, colors, fonts, windowHeight} from '../../utils';
+import {Color, colors, fonts, windowHeight, windowWidth} from '../../utils';
 import {
   MyHeader,
   MyButton,
@@ -25,11 +25,17 @@ import {useEffect} from 'react';
 import {FlatList} from 'react-native';
 import RBSheet from 'react-native-raw-bottom-sheet';
 import {useRef} from 'react';
-import {MYAPP} from '../../utils/localStorage';
+import {
+  getData as getDataAsyc,
+  MYAPP,
+  storeData,
+} from '../../utils/localStorage';
+import {PermissionsAndroid} from 'react-native';
 
 export default function DetailTransaksi({navigation, route}) {
   const toast = useToast();
   const [editId, setEditId] = useState(null);
+  const [dataCatatan, setDataCatatan] = useState([]);
 
   // Options untuk status dropdown
   const [transaction, setTransaction] = useState(route.params);
@@ -138,15 +144,20 @@ export default function DetailTransaksi({navigation, route}) {
 
   // Ambil data transaksi dari parameter
 
-  console.log(transaction);
   const createTable = () => {
     db.transaction(tx => {
       tx.executeSql(
         `CREATE TABLE IF NOT EXISTS transaksi_bayar (id INTEGER PRIMARY KEY AUTOINCREMENT, fid_transaksi INTEGER NOT NULL, tanggal_bayar TEXT NOT NULL, total DECIMAL(10,2), catatan TEXT, FOREIGN KEY (fid_transaksi) REFERENCES transaksi(id));`,
       );
     });
-  };
 
+    db.transaction(tx => {
+      tx.executeSql(
+        `CREATE TABLE IF NOT EXISTS transaksi_foto (id INTEGER PRIMARY KEY AUTOINCREMENT, fid_transaksi INTEGER NOT NULL, foto TEXT NOT NULL, FOREIGN KEY (fid_transaksi) REFERENCES transaksi(id));`,
+      );
+    });
+  };
+  const [foto, setFoto] = useState([]);
   const [bayar, setBayar] = useState([]);
   const getData = () => {
     db.transaction(tx => {
@@ -191,7 +202,108 @@ export default function DetailTransaksi({navigation, route}) {
           setBayar(temp);
         },
       );
+
+      tx.executeSql(
+        `SELECT * FROM transaksi_foto  WHERE fid_transaksi='${transaction.id}' ORDER BY id DESC`,
+        [],
+        (tx, res) => {
+          let rows = res.rows;
+          let temp = [];
+          for (let i = 0; i < rows.length; i++) {
+            temp.push(rows.item(i));
+          }
+          console.log('TEH FOTO', temp);
+          setFoto(temp);
+        },
+      );
     });
+  };
+
+  const requestCameraPermission = async () => {
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.CAMERA,
+        {
+          title: 'Cool Photo App Camera Permission',
+          message:
+            'Cool Photo App needs access to your camera ' +
+            'so you can take awesome pictures.',
+          buttonNeutral: 'Ask Me Later',
+          buttonNegative: 'Cancel',
+          buttonPositive: 'OK',
+        },
+      );
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+        console.log('You can use the camera');
+      } else {
+        console.log('Camera permission denied');
+      }
+    } catch (err) {
+      console.warn(err);
+    }
+  };
+
+  const updateFoto = () => {
+    Alert.alert(MYAPP, 'Pilih gambar', [
+      {text: 'Batal'},
+      {
+        text: 'Galeri',
+        onPress: () => {
+          launchImageLibrary(
+            {
+              includeBase64: false,
+              quality: 1,
+              mediaType: 'photo',
+              maxWidth: 200,
+              maxHeight: 200,
+            },
+            response => {
+              if (!response.didCancel) {
+                db.transaction(tx => {
+                  tx.executeSql(
+                    `INSERT INTO transaksi_foto(fid_transaksi,foto) VALUES('${transaction.id}','${response.assets[0].uri}')`,
+                    [],
+                    () => {
+                      getData();
+                    },
+                  );
+                });
+              }
+            },
+          );
+        },
+      },
+      {
+        text: 'Kamera',
+        onPress: () => {
+          requestCameraPermission().then(() => {
+            launchCamera(
+              {
+                includeBase64: true,
+                quality: 1,
+                mediaType: 'photo',
+                maxWidth: 500,
+                maxHeight: 500,
+              },
+              response => {
+                if (!response.didCancel) {
+                  console.log(response.assets[0]);
+                  db.transaction(tx => {
+                    tx.executeSql(
+                      `INSERT INTO transaksi_foto(fid_transaksi,foto) VALUES('${transaction.id}','${response.assets[0].uri}')`,
+                      [],
+                      () => {
+                        getData();
+                      },
+                    );
+                  });
+                }
+              },
+            );
+          });
+        },
+      },
+    ]);
   };
 
   // State untuk status transaksi
@@ -296,6 +408,21 @@ export default function DetailTransaksi({navigation, route}) {
         toast.show('Data berhasil disimpan !', {
           type: 'success',
         });
+        Alert.alert(MYAPP, 'Simpan catatan diriwayat ?', [
+          {
+            text: 'TIDAK',
+          },
+          {
+            text: 'YA',
+            onPress: () => {
+              console.log(transaction.keterangan);
+              let tmp = [...dataCatatan];
+              tmp.push(transaction.keterangan);
+              storeData('catatan', tmp);
+              setDataCatatan(tmp);
+            },
+          },
+        ]);
       });
     });
   };
@@ -433,7 +560,19 @@ export default function DetailTransaksi({navigation, route}) {
     ]);
   };
 
+  const getRiwayatCatatan = () => {
+    // getData('catatan').then(res => {
+    //   // setDataCatatan(!res ? [] : res);
+    //   console.log('catatan', res);
+    // });
+    getDataAsyc('catatan').then(res => {
+      console.log('catatan', !res ? [] : res);
+      setDataCatatan(!res ? [] : res);
+    });
+  };
+
   useEffect(() => {
+    getRiwayatCatatan();
     createTable();
     getData();
     getDevice();
@@ -467,7 +606,27 @@ export default function DetailTransaksi({navigation, route}) {
   const [openCatatan, setOpenCatatan] = useState(false);
   const [openTanggal, setOpenTanggal] = useState(false);
   const [deviceHistory, setDeviceHistory] = useState(false);
+  const [tipe, setTipe] = useState(transaction.kode.toString().substring(0, 4));
 
+  const updateKode = x => {
+    console.log(x);
+
+    let before = transaction.kode.toString().substring(0, 4);
+    let newkode = transaction.kode.toString().replace(before, x);
+    db.transaction(tx => {
+      tx.executeSql(
+        `UPDATE transaksi SET kode='${newkode}' WHERE id='${transaction.id}'`,
+        [],
+        () => {
+          setTransaction({
+            ...transaction,
+            kode: newkode,
+          });
+          getData();
+        },
+      );
+    });
+  };
   return (
     <View
       style={{
@@ -488,6 +647,7 @@ export default function DetailTransaksi({navigation, route}) {
                 transaksi: transaction,
                 transaksi_detail: data,
                 transaksi_bayar: totalBayar,
+                foto: foto,
               })
             }
             Icons="print-outline"
@@ -511,6 +671,60 @@ export default function DetailTransaksi({navigation, route}) {
               }}>
               {transaction.kode}
             </Text>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-around',
+              }}>
+              <TouchableOpacity
+                onPress={() => {
+                  setTipe('#EST');
+                  updateKode('#EST');
+                }}
+                style={{
+                  padding: 10,
+                  backgroundColor:
+                    tipe == '#EST' ? colors.primary : colors.white,
+                  borderWidth: 1,
+                  borderColor:
+                    tipe == '#EST' ? colors.primary : Color.blueGray[100],
+                  flex: 1,
+                }}>
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    color: tipe == '#EST' ? colors.white : colors.primary,
+                    fontSize: 12,
+                    fontFamily: fonts.secondary[600],
+                  }}>
+                  #EST ( Perkiraan )
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  setTipe('#INV');
+                  updateKode('#INV');
+                }}
+                style={{
+                  padding: 10,
+                  backgroundColor:
+                    tipe == '#INV' ? colors.primary : colors.white,
+                  borderWidth: 1,
+                  borderColor:
+                    tipe == '#INV' ? colors.primary : Color.blueGray[100],
+                  flex: 1,
+                }}>
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    color: tipe == '#INV' ? colors.white : colors.primary,
+                    fontSize: 12,
+                    fontFamily: fonts.secondary[600],
+                  }}>
+                  #INV ( Faktur )
+                </Text>
+              </TouchableOpacity>
+            </View>
             <View
               style={{
                 marginTop: 10,
@@ -926,6 +1140,68 @@ export default function DetailTransaksi({navigation, route}) {
                     })
                   }
                 />
+
+                {dataCatatan.length > 0 &&
+                  dataCatatan.map((i, index) => {
+                    return (
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          padding: 5,
+                          alignItems: 'center',
+                        }}>
+                        <Text
+                          style={{
+                            flex: 1,
+                            fontFamily: fonts.secondary[400],
+                            fontSize: 10,
+                          }}>
+                          {i}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => {
+                            setTransaction({...transaction, keterangan: i});
+                            db.transaction(tx => {
+                              let sql = `UPDATE transaksi SET keterangan='${i}' WHERE id='${transaction.id}'`;
+                              console.log(sql);
+                              tx.executeSql(sql, [], (tx, res) => {
+                                console.log(res);
+                                setOpenCatatan(false);
+                                getData();
+                                toast.show('Data berhasil disimpan !', {
+                                  type: 'success',
+                                });
+                              });
+                            });
+                          }}>
+                          <Icon
+                            type="ionicon"
+                            name="open-outline"
+                            size={20}
+                            color={colors.secondary}
+                          />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => {
+                            const tmp = dataCatatan.filter(
+                              (_, i) => i !== index,
+                            );
+                            setDataCatatan(tmp);
+                            storeData('catatan', tmp);
+                          }}
+                          style={{
+                            marginHorizontal: 5,
+                          }}>
+                          <Icon
+                            type="ionicon"
+                            size={20}
+                            name="trash-outline"
+                            color={colors.primary}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
                 <MyButton onPress={updateCatatan} title="Simpan Catatan" />
               </View>
             )}
@@ -1286,6 +1562,86 @@ export default function DetailTransaksi({navigation, route}) {
               />
             </View>
           </RBSheet>
+
+          <View
+            style={{
+              backgroundColor: 'white',
+              borderRadius: 15,
+              padding: 20,
+              marginBottom: 20,
+              borderWidth: 1,
+              borderColor: Color.blueGray[200],
+            }}>
+            <Text
+              style={{
+                fontFamily: fonts.secondary[800],
+                fontSize: 14,
+                color: colors.secondary,
+              }}>
+              Lampiran Foto
+            </Text>
+            {foto.length > 0 && (
+              <FlatList
+                data={foto}
+                renderItem={({item, index}) => {
+                  return (
+                    <View
+                      style={{
+                        marginVertical: 4,
+                        padding: 4,
+                        borderWidth: 1,
+                        borderRadius: 10,
+                        borderColor: Color.blueGray[200],
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                      }}>
+                      <Image
+                        source={{
+                          uri: item.foto,
+                        }}
+                        style={{
+                          width: windowWidth / 1.5,
+                          height: windowWidth / 1.5,
+                          resizeMode: 'contain',
+                        }}
+                      />
+                      <TouchableOpacity
+                        onPress={() => {
+                          Alert.alert(MYAPP, 'Hapus foto ini ?', [
+                            {text: 'Tidak'},
+                            {
+                              text: 'HAPUS',
+                              onPress: () => {
+                                db.transaction(tx => {
+                                  tx.executeSql(
+                                    `DELETE FROM transaksi_foto WHERE id='${item.id}'`,
+                                    [],
+                                    () => {
+                                      getData();
+                                    },
+                                  );
+                                });
+                              },
+                            },
+                          ]);
+                        }}
+                        style={{
+                          marginHorizontal: 5,
+                        }}>
+                        <Icon
+                          type="ionicon"
+                          size={20}
+                          name="trash-outline"
+                          color={colors.primary}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  );
+                }}
+              />
+            )}
+            <MyButton onPress={updateFoto} title="Tambah Foto" />
+          </View>
           <MyGap jarak={20} />
         </View>
       </ScrollView>

@@ -1,7 +1,7 @@
 import {StyleSheet, Text, View} from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {SafeAreaView} from 'react-native';
-import {colors, fonts, windowHeight, windowWidth} from '../../utils';
+import {Color, colors, fonts, windowHeight, windowWidth} from '../../utils';
 import {
   MyButton,
   MyCalendar,
@@ -205,7 +205,7 @@ export default function TransaksiAdd({navigation, route}) {
       ],
     );
   };
-
+  const [tipe, setTipe] = useState('#EST');
   const [kirim, setKirim] = useState({
     fid_customer: '',
     tanggal: moment().format('YYYY-MM-DD'),
@@ -237,7 +237,7 @@ export default function TransaksiAdd({navigation, route}) {
   const insertTransaksi = transactionData => {
     return new Promise((resolve, reject) => {
       // Generate kode transaksi
-      const kodeTransaksi = moment().format('YYYYMMDDHHmmss');
+      const kodeTransaksi = tipe + moment().format('YYYYMMDDHHmmss');
 
       // Hitung total bruto dan total diskon
       const totalBruto = transactionData.items.reduce(
@@ -580,6 +580,50 @@ export default function TransaksiAdd({navigation, route}) {
       <MyHeader title="Tambah Transaksi" />
       <View
         style={{
+          flexDirection: 'row',
+          justifyContent: 'space-around',
+        }}>
+        <TouchableOpacity
+          onPress={() => setTipe('#EST')}
+          style={{
+            padding: 10,
+            backgroundColor: tipe == '#EST' ? colors.primary : colors.white,
+            borderWidth: 1,
+            borderColor: tipe == '#EST' ? colors.primary : Color.blueGray[100],
+            flex: 1,
+          }}>
+          <Text
+            style={{
+              textAlign: 'center',
+              color: tipe == '#EST' ? colors.white : colors.primary,
+              fontSize: 12,
+              fontFamily: fonts.secondary[600],
+            }}>
+            #EST ( Perkiraan )
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setTipe('#INV')}
+          style={{
+            padding: 10,
+            backgroundColor: tipe == '#INV' ? colors.primary : colors.white,
+            borderWidth: 1,
+            borderColor: tipe == '#INV' ? colors.primary : Color.blueGray[100],
+            flex: 1,
+          }}>
+          <Text
+            style={{
+              textAlign: 'center',
+              color: tipe == '#INV' ? colors.white : colors.primary,
+              fontSize: 12,
+              fontFamily: fonts.secondary[600],
+            }}>
+            #INV ( Faktur )
+          </Text>
+        </TouchableOpacity>
+      </View>
+      <View
+        style={{
           flex: 1,
           padding: 10,
         }}>
@@ -900,7 +944,6 @@ export default function TransaksiAdd({navigation, route}) {
             <MyInput
               label="Serial Number"
               placeholder="Masukan serial number"
-              keyboardType="number-pad"
               value={kirimCart.serial}
               onChangeText={x =>
                 setkirimCart({
@@ -944,7 +987,7 @@ export default function TransaksiAdd({navigation, route}) {
                   }
                 />
               </View>
-              <View
+              {/* <View
                 style={{
                   flex: 1,
                   paddingLeft: 2,
@@ -961,7 +1004,7 @@ export default function TransaksiAdd({navigation, route}) {
                     })
                   }
                 />
-              </View>
+              </View> */}
             </View>
 
             <View

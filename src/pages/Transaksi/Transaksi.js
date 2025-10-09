@@ -93,9 +93,20 @@ export default function Transaksi({navigation, route}) {
   const filterData = text => {
     setSearch(text);
     if (text) {
-      const newData = data.filter(item =>
-        item.kode.toLowerCase().includes(text.toLowerCase()),
-      );
+      const lowerText = text.toLowerCase();
+
+      const newData = data.filter(item => {
+        const kode = item.kode?.toLowerCase() || '';
+        const nama = item.nama?.toLowerCase() || '';
+        const telepon = item.telepon?.toLowerCase() || '';
+
+        return (
+          kode.includes(lowerText) ||
+          nama.includes(lowerText) ||
+          telepon.includes(lowerText)
+        );
+      });
+
       setFiltered(newData);
     } else {
       setFiltered(data);
@@ -178,9 +189,7 @@ export default function Transaksi({navigation, route}) {
                   {moment(item.tanggal).format('DD MMMM YYYY')}
                 </Text>
                 <MyGap jarak={5} />
-                <Text style={styles.nama}>
-                  {item.nama} {item.id}
-                </Text>
+                <Text style={styles.nama}>{item.nama}</Text>
                 <Text style={styles.nama}>{item.telepon}</Text>
               </View>
               <View>
