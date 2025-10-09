@@ -376,7 +376,7 @@ export default function DataKustomer({navigation, route}) {
             {editId ? 'Edit Pelangan' : 'Tambah Pelangan'}
           </Text>
           <MyInput
-            label="Nama"
+            label={`Nama`}
             value={kirim.nama}
             onChangeText={x => setKirim({...kirim, nama: x})}
           />

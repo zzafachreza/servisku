@@ -56,7 +56,18 @@ export default function Account({navigation}) {
 
   // Fungsi untuk meminta permission di Android
   const requestStoragePermission = async () => {
-    if (Platform.OS === 'android' && Platform.Version < 30) {
+    if (Platform.OS === 'android') {
+      // Android 13+ (API 33+) - Tidak perlu WRITE_EXTERNAL_STORAGE
+      if (Platform.Version >= 33) {
+        return true;
+      }
+
+      // Android 11-12 (API 30-32) - Tidak perlu WRITE_EXTERNAL_STORAGE
+      if (Platform.Version >= 30) {
+        return true;
+      }
+
+      // Android 10 dan ke bawah (API 29-)
       try {
         const granted = await PermissionsAndroid.requestMultiple([
           PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
@@ -68,7 +79,14 @@ export default function Account({navigation}) {
         );
 
         if (!allGranted) {
-          console.log('Izin penyimpanan ditolak');
+          Alert.alert(
+            'Izin Diperlukan',
+            'Aplikasi memerlukan izin penyimpanan untuk mengunduh file',
+            [
+              {text: 'Batal', style: 'cancel'},
+              {text: 'Buka Pengaturan', onPress: () => Linking.openSettings()},
+            ],
+          );
           return false;
         }
 
@@ -79,65 +97,133 @@ export default function Account({navigation}) {
       }
     }
 
-    return true; // Android 11 ke atas tidak butuh izin untuk app directory
+    return true; // iOS
   };
 
   // Fungsi Backup Database
-  const backupDB = async () => {
-    setLoading(true);
+  // Fungsi untuk mendapatkan backup path berdasarkan versi Android
+  const getBackupPath = (fileName = 'servisku.backup') => {
+    if (Platform.OS === 'android') {
+      // Android 10+ - Gunakan DownloadDirectoryPath (Scoped Storage)
+      if (Platform.Version >= 29) {
+        return `${RNFS.DownloadDirectoryPath}/${fileName}`;
+      }
+
+      // Android 9 ke bawah - Gunakan ExternalStorageDirectoryPath
+      return `${RNFS.ExternalStorageDirectoryPath}/Download/${fileName}`;
+    }
+
+    // iOS
+    return `${RNFS.DocumentDirectoryPath}/${fileName}`;
+  };
+
+  // Fungsi utama backup database
+  const backupDB = async (toast, setLoading) => {
+    // setLoading(true);
     try {
-      // Meminta permission terlebih dahulu
+      // 1. Meminta permission terlebih dahulu
       const hasPermission = await requestStoragePermission();
       if (!hasPermission) {
-        setLoading(false);
+        // setLoading(false);
         return;
       }
 
-      // Path database asli
-      const dbPath = `/data/data/com.serviceku/databases/azeraf.db`;
-      console.log(dbPath);
+      // 2. Path database asli
+      const dbPath = `${RNFS.DocumentDirectoryPath}/../databases/azeraf.db`;
+      // Alternatif: const dbPath = '/data/data/com.serviceku/databases/azeraf.db';
 
-      // Cek apakah database ada
+      console.log('DB Path:', dbPath);
+
+      // 3. Cek apakah database ada
       const dbExists = await RNFS.exists(dbPath);
       if (!dbExists) {
         Alert.alert('Error', 'Database tidak ditemukan!');
+        toast?.show('Database tidak ditemukan!', {type: 'danger'});
         setLoading(false);
         return;
       }
 
-      // Path untuk menyimpan backup dengan nama servisku.backup
-      const backupPath = `${RNFS.DownloadDirectoryPath}/servisku.backup`;
+      // 4. Buat nama file dengan timestamp
+      const timestamp = new Date()
+        .toISOString()
+        .replace(/[:.]/g, '-')
+        .slice(0, -5);
+      const fileName = `servisku_backup_${timestamp}.backup`;
 
-      // Copy database ke folder Download dengan nama baru
+      // 5. Path untuk menyimpan backup
+      const backupPath = getBackupPath(fileName);
+      console.log('Backup Path:', backupPath);
+
+      // 6. Pastikan folder tujuan ada (untuk Android 9 ke bawah)
+      if (Platform.OS === 'android' && Platform.Version < 29) {
+        const downloadDir = `${RNFS.ExternalStorageDirectoryPath}/Download`;
+        const dirExists = await RNFS.exists(downloadDir);
+        if (!dirExists) {
+          await RNFS.mkdir(downloadDir);
+        }
+      }
+
+      // 7. Copy database ke folder backup
       await RNFS.copyFile(dbPath, backupPath);
 
+      // 8. Verifikasi backup berhasil
+      const backupExists = await RNFS.exists(backupPath);
+      if (!backupExists) {
+        throw new Error('Backup file tidak ditemukan setelah copy');
+      }
+
+      // 9. Dapatkan ukuran file untuk konfirmasi
+      const fileInfo = await RNFS.stat(backupPath);
+      const fileSizeKB = (fileInfo.size / 1024).toFixed(2);
+
+      console.log('Backup berhasil:', backupPath);
+      console.log('Ukuran file:', fileSizeKB, 'KB');
+
+      // 10. Tampilkan alert sukses
       Alert.alert(
         'Backup Berhasil!',
-        `Database telah dibackup ke:\n${backupPath}`,
+        `Database telah dibackup:\n\nFile: ${fileName}\nUkuran: ${fileSizeKB} KB\nLokasi: Download`,
         [
           {
             text: 'OK',
-            onPress: () => {
-              toast.show('Backup database berhasil!', {type: 'success'});
-            },
           },
           {
-            text: 'Upload ke Google Drive',
+            text: 'Share/Upload',
             onPress: async () => {
-              await Share.open({
-                url: 'file://' + backupPath, // path file backup sqlite
-                type: 'application/octet-stream', // cocok untuk .db / .sqlite
-                title: 'Upload ke Google Drive',
-                subject: 'Database Backup',
-              });
+              try {
+                await Share.open({
+                  url:
+                    Platform.OS === 'android'
+                      ? `file://${backupPath}`
+                      : backupPath,
+                  type: 'application/octet-stream',
+                  title: 'Backup Database',
+                  subject: 'Database Backup - Servisku',
+                  message: `Backup database pada ${new Date().toLocaleString(
+                    'id-ID',
+                  )}`,
+                  filename: fileName,
+                });
+              } catch (shareError) {
+                if (shareError.message !== 'User did not share') {
+                  console.error('Share error:', shareError);
+                  Alert.alert('Error', 'Gagal membuka share dialog');
+                }
+              }
             },
           },
         ],
       );
+
+      return backupPath;
     } catch (error) {
       console.error('Backup error:', error);
-      Alert.alert('Error', 'Gagal melakukan backup database');
-      toast.show('Backup gagal!', {type: 'danger'});
+      Alert.alert(
+        'Error',
+        `Gagal melakukan backup database:\n${error.message}`,
+      );
+      toast?.show('Backup gagal!', {type: 'danger'});
+      return null;
     } finally {
       setLoading(false);
     }
@@ -247,6 +333,10 @@ export default function Account({navigation}) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    requestStoragePermission();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
